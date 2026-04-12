@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  MANAGER
+  SALES
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String
+  username      String          @unique
+  email         String          @unique
+  passwordHash  String
+  role          UserRole
+  defaultPassword Boolean       @default(false)
+  managerId     String?
+  manager       User?           @relation("ManagerToSales", fields: [managerId], references: [id])
+  teamMembers   User[]          @relation("ManagerToSales")
+  personaProfile PersonaProfile?
+  customers     Customer[]      @relation("SalesOwnerCustomers")
+  appointments  Appointment[]
+  followUps     FollowUpNote[]
+  scriptTemplates ScriptTemplate[]
+  supplementalScripts SupplementalScript[]
+  knowledgeDocuments KnowledgeDocument[]
+  assessmentTemplates AssessmentTemplate[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([managerId])
+  @@index([role])
+  @@index([username])
+}
+
+model PersonaProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  displayTitle     String
+  introHeadline    String
+  expertiseSummary String
+  trustSignal      String
+  openingStyle     String
+  inviteStyle      String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Customer {
+  id                       String                @id @default(cuid())
+  ownerId                  String
+  owner                    User                  @relation("SalesOwnerCustomers", fields: [ownerId], references: [id])
+  currentStatusId          String?
+  currentStatus            StatusDefinition?     @relation(fields: [currentStatusId], references: [id])
+  wechatNickname           String
+  phone                    String?               @unique
+  memberStatus             String?
+  gender                   String?
+  education                String?
+  ageRange                 String?
+  childrenCount            String?
+  childAgeRanges           String
+  decisionMakerCount       String?
+  primaryCaretaker         String?
+  parentingRole            String?
+  occupationCategory       String?
+  occupationDetail         String?
+  source                   String?
+  sourceDetail             String?
+  ipLocation               String?
+  totalScore               Int?
+  completionSeconds        Int?
+  submittedAt              DateTime?
+  coreProblem              String?
+  coreConcern              String?
+  attemptedActions         String?
+  attemptedOutcome         String?
+  desiredSupport           String?
+  assessments              AssessmentSubmission[]
+  reports                  ReportSnapshot[]
+  statusTransitions        StatusTransition[]
+  appointments             Appointment[]
+  followUps                FollowUpNote[]
+  supplementalScripts      SupplementalScript[]
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+
+  @@index([ownerId])
+  @@index([currentStatusId])
+  @@index([submittedAt])
+  @@index([source])
+}
+
+model AssessmentSubmission {
+  id             String           @id @default(cuid())
+  customerId     String
+  customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  templateId     String?
+  template       AssessmentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  version        String
+  answersData    String
+  intakeData     String
+  submittedAt    DateTime         @default(now())
+  totalScore     Int
+  reportSnapshot ReportSnapshot?
+  createdAt      DateTime         @default(now())
+
+  @@index([customerId, submittedAt])
+  @@index([templateId, submittedAt])
+}
+
+model ReportSnapshot {
+  id                   String               @id @default(cuid())
+  customerId           String
+  customer             Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  submissionId         String               @unique
+  submission           AssessmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  parentType           String
+  overallScore         Int
+  anxietyPercent       Int
+  burnoutPercent       Int
+  competencePercent    Int
+  parentRadarData      String
+  childRadarData       String
+  courseRecommendations String
+  reportData           String
+  createdAt            DateTime             @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([parentType])
+}
+
+model StatusDefinition {
+  id              String             @id @default(cuid())
+  code            String             @unique
+  name            String
+  color           String
+  sortOrder       Int
+  enabled         Boolean            @default(true)
+  isDefault       Boolean            @default(false)
+  inPrimaryFunnel Boolean            @default(true)
+  manualAllowed   Boolean            @default(true)
+  description     String?
+  customers       Customer[]
+  transitionsTo   StatusTransition[] @relation("StatusTo")
+  transitionsFrom StatusTransition[] @relation("StatusFrom")
+  appointments    Appointment[]
+  templates       ScriptTemplate[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model StatusTransition {
+  id           String           @id @default(cuid())
+  customerId   String
+  customer     Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  fromStatusId String?
+  fromStatus   StatusDefinition? @relation("StatusFrom", fields: [fromStatusId], references: [id])
+  toStatusId   String
+  toStatus     StatusDefinition @relation("StatusTo", fields: [toStatusId], references: [id])
+  operatorId   String?
+  operatorName String?
+  notes        String?
+  createdAt    DateTime         @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([toStatusId, createdAt])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  customerId  String?
+  customer    Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  ownerId     String
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  statusId    String?
+  status      StatusDefinition? @relation(fields: [statusId], references: [id])
+  title       String
+  kind        String
+  participantName String?
+  startAt     DateTime
+  endAt       DateTime
+  notes       String?
+  createdAt   DateTime          @default(now())
+
+  @@index([customerId, startAt])
+  @@index([ownerId, startAt])
+  @@index([statusId])
+}
+
+model FollowUpNote {
+  id             String   @id @default(cuid())
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  channel        String
+  summary        String
+  customerQuotes String?
+  nextAction     String?
+  nextActionAt   DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([nextActionAt])
+}
+
+model ScriptTemplate {
+  id             String            @id @default(cuid())
+  authorId       String?
+  author         User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  statusId       String?
+  status         StatusDefinition? @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  category       String
+  title          String
+  applicableDimension String?
+  applicableParentType String?
+  applicableStage String?
+  content        String
+  source         String
+  approvalState  String            @default("approved")
+  priority       Int               @default(100)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([authorId])
+  @@index([approvalState, priority])
+  @@index([applicableDimension])
+  @@index([applicableStage])
+}
+
+model SupplementalScript {
+  id                   String   @id @default(cuid())
+  customerId           String
+  customer             Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  authorId             String
+  author               User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  sectionKey           String
+  sectionTitle         String
+  content              String
+  approvedToTemplate   Boolean  @default(false)
+  approvedAt           DateTime?
+  approvedById         String?
+  approvedByName       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([approvedToTemplate, createdAt])
+}
+
+model AssessmentTemplate {
+  id                String                  @id @default(cuid())
+  title             String
+  slug              String                  @unique
+  shortName         String
+  description       String
+  introTitle        String?
+  introBody         String?
+  reportOutlineJson String                  @default("[]")
+  configJson        String                  @default("{}")
+  sourceType        String                  @default("manual")
+  sourceDocument    String?
+  sourceText        String?
+  enabled           Boolean                 @default(true)
+  isPrimary         Boolean                 @default(false)
+  createdById       String?
+  createdBy         User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  submissions       AssessmentSubmission[]
+  knowledgeDocuments KnowledgeDocument[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([enabled, isPrimary])
+  @@index([createdById])
+}
+
+model KnowledgeDocument {
+  id              String           @id @default(cuid())
+  assessmentTemplateId String?
+  assessmentTemplate AssessmentTemplate? @relation(fields: [assessmentTemplateId], references: [id], onDelete: SetNull)
+  title           String
+  category        String
+  sourceType      String
+  fileName        String?
+  filePath        String?
+  rawText         String
+  summary         String?
+  tagsJson        String           @default("[]")
+  metadataJson    String           @default("{}")
+  enabled         Boolean          @default(true)
+  createdById     String?
+  createdBy       User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  chunks          KnowledgeChunk[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([category, enabled])
+  @@index([createdById])
+  @@index([assessmentTemplateId, category])
+  @@index([createdAt])
+}
+
+model KnowledgeChunk {
+  id               String            @id @default(cuid())
+  documentId       String
+  document         KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex       Int
+  content          String
+  embeddingJson    String
+  embeddingModel   String
+  tokensJson       String           @default("[]")
+  createdAt        DateTime         @default(now())
+
+  @@index([documentId, chunkIndex])
+}
