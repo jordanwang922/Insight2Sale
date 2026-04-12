@@ -22,6 +22,24 @@
 
 ## 当前记录
 
+### 2026-04-12 下午
+
+- 本次目标：修复主管知识库「检索与状态」中「保存」按钮被压成竖排字的问题；修复客户解读台「开场人设」两按钮在 13 寸屏上换行的问题；更新日志并确认本地可访问服务供验收。
+- 完成内容：
+  - 知识库卡片：左侧内容区 `min-w-0 flex-1`，右侧「启用 + 保存」表单 `shrink-0`、`flex-nowrap`，保存按钮 `whitespace-nowrap` + `type="submit"`，避免窄宽度下按钮被挤成一字一行
+  - 开场人设：两按钮统一更小字号（`text-[11px]` / `sm:text-xs`）、`whitespace-nowrap`，避免与 `sm:text-sm` 放大后换行
+- 影响文件：
+  - `src/app/dashboard/knowledge/page.tsx`
+  - `src/app/dashboard/customers/[customerId]/page.tsx`
+  - `docs/logs/development-log.md`
+  - `docs/logs/handoff-log.md`
+- 验证情况：
+  - `npx eslint` 针对上述页面已通过
+  - 本地 `http://127.0.0.1:3001/` 返回 `200`（该端口已有 `next dev` / Node 进程在监听；若重复执行 `PORT=3001 npm run dev` 会因 `EADDRINUSE` 失败，属正常）
+  - **补充（同日稍后）**：用户以生产模式访问时需重新编译；已执行 `npm run build` 成功，结束旧 3001 进程后已用 `PORT=3001 npm run start` 拉起新构建，强刷后即可看到界面更新
+- 未完成项：同前（独立 Git 仓库与远端推送等）
+- 下一步建议：浏览器强刷后验收知识库与客户解读台布局；若需改端口，可用 `PORT=3000 npm run dev`。
+
 ### 2026-04-12 10:11
 
 - 本次目标：修复客户解读台开场人设区的按钮布局与导入逻辑，补齐版本文档并准备发布 `v0.5.0`。

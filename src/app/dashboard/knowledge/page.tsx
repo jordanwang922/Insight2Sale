@@ -113,7 +113,7 @@ export default async function KnowledgePage({
                 return (
                   <div key={document.id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-lg font-semibold text-slate-950">{document.title}</p>
                           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
@@ -146,13 +146,19 @@ export default async function KnowledgePage({
                           {document.createdBy?.name ?? "系统"}
                         </p>
                       </div>
-                      <form action={updateKnowledgeDocumentState} className="flex items-center gap-3">
+                      <form
+                        action={updateKnowledgeDocumentState}
+                        className="flex shrink-0 flex-row flex-nowrap items-center gap-2 md:gap-3 md:self-start"
+                      >
                         <input name="id" type="hidden" value={document.id} />
-                        <label className="inline-flex items-center gap-2 whitespace-nowrap text-sm text-slate-600">
+                        <label className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-slate-600">
                           <input defaultChecked={document.enabled} name="enabled" type="checkbox" />
                           启用
                         </label>
-                        <button className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
+                        <button
+                          type="submit"
+                          className="shrink-0 whitespace-nowrap rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                        >
                           保存
                         </button>
                       </form>

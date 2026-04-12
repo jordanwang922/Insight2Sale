@@ -290,3 +290,16 @@
   5. 用 `gh repo edit` 更新仓库描述
   - 当前数据库中已不存在该客户
   - 大概率是在之前为切 Postgres / 改 schema 执行 `db push --force-reset` 时被清掉，无法从当前库直接恢复
+
+### 2026-04-12 下午 UI 与本地服务
+
+- 本次修复：
+  - 主管端知识库「检索与状态」：每条知识卡片右侧「保存」按钮不再被挤成竖排；左侧摘要区可收缩（`min-w-0 flex-1`），右侧「启用 + 保存」不收缩（`shrink-0`、`flex-nowrap`）
+  - 客户解读台「开场人设」：「保存开场人设」「导入个人文案库」两按钮缩小字号并 `whitespace-nowrap`，减少 13 寸屏上第二颗按钮换行
+- 关键文件：
+  - `src/app/dashboard/knowledge/page.tsx`
+  - `src/app/dashboard/customers/[customerId]/page.tsx`
+- 本地验收：
+  - 浏览器访问 `http://localhost:3001`（与 README 中 `AUTH_URL` 端口一致）
+  - 本轮尝试再起 `PORT=3001 npm run dev` 时若报 `EADDRINUSE`，说明该端口已有实例在跑，直接刷新页面即可，无需重复启动
+  - **若使用 `npm run start`（生产模式）**：改代码后必须重新 `npm run build` 并重启 `next start`，否则页面仍是旧构建；`next dev` 则一般保存即热更新

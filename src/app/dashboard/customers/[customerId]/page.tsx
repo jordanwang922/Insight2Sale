@@ -262,14 +262,20 @@ export default async function CustomerWorkspacePage({
                   <form id="save-opening-style" action={savePersonaProfile}>
                     <input type="hidden" name="userId" value={data.customer.ownerId} />
                     <input type="hidden" name="customerId" value={data.customer.id} />
-                    <button className="w-full rounded-2xl border border-slate-300 px-2 py-3 text-[13px] font-medium leading-5 text-slate-700 sm:px-3 sm:text-sm">
+                    <button
+                      type="submit"
+                      className="w-full whitespace-nowrap rounded-2xl border border-slate-300 px-1.5 py-2.5 text-[11px] font-medium leading-tight text-slate-700 sm:px-2 sm:text-xs"
+                    >
                       保存开场人设
                     </button>
                   </form>
                   <form action={importPersonaLibraryToOpeningStyle}>
                     <input type="hidden" name="userId" value={data.customer.ownerId} />
                     <input type="hidden" name="customerId" value={data.customer.id} />
-                    <button className="w-full rounded-2xl border border-slate-300 px-2 py-3 text-[13px] font-medium leading-5 text-slate-700 sm:px-3 sm:text-sm">
+                    <button
+                      type="submit"
+                      className="w-full whitespace-nowrap rounded-2xl border border-slate-300 px-1.5 py-2.5 text-[11px] font-medium leading-tight text-slate-700 sm:px-2 sm:text-xs"
+                    >
                       导入个人文案库
                     </button>
                   </form>
