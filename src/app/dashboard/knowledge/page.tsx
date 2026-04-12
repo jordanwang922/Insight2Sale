@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { categoryDescriptions, knowledgeCategories } from "@/features/knowledge/categories";
+import { slugFromCategory } from "@/features/knowledge/category-slugs";
 import { getKnowledgeOverview, requireManagerSession } from "@/features/crm/queries";
 import { ingestKnowledgeDocument, updateKnowledgeDocumentState } from "@/server/actions/knowledge";
 import { parseJson } from "@/lib/utils";
@@ -34,17 +36,26 @@ export default async function KnowledgePage({
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {knowledgeCategories.map((category) => (
-          <article key={category} className="rounded-[1.5rem] border border-slate-200 bg-white px-5 py-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-base font-semibold text-slate-950">{category}</p>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                {countMap.get(category) ?? 0} 条
-              </span>
-            </div>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{categoryDescriptions[category]}</p>
-          </article>
-        ))}
+        {knowledgeCategories.map((category) => {
+          const slug = slugFromCategory(category);
+          if (!slug) return null;
+          return (
+            <Link
+              key={category}
+              href={`/dashboard/knowledge/category/${slug}`}
+              className="block rounded-[1.5rem] border border-slate-200 bg-white px-5 py-5 shadow-sm transition hover:border-amber-300 hover:shadow-md"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-base font-semibold text-slate-950">{category}</p>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                  {countMap.get(category) ?? 0} 条
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{categoryDescriptions[category]}</p>
+              <p className="mt-4 text-xs font-medium text-amber-700">点击进入本模块 →</p>
+            </Link>
+          );
+        })}
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
@@ -115,7 +126,12 @@ export default async function KnowledgePage({
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-lg font-semibold text-slate-950">{document.title}</p>
+                          <Link
+                            className="text-lg font-semibold text-slate-950 hover:text-amber-800 hover:underline"
+                            href={`/dashboard/knowledge/document/${document.id}/edit`}
+                          >
+                            {document.title}
+                          </Link>
                           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
                             {document.category}
                           </span>

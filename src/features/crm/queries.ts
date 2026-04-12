@@ -6,6 +6,7 @@ import { AssessmentReport } from "@/features/assessment/types";
 import { buildMonthCalendar } from "@/features/crm/calendar";
 import { retrieveKnowledge } from "@/features/knowledge/retrieval";
 import { knowledgeCategories } from "@/features/knowledge/categories";
+import { categoryFromSlug } from "@/features/knowledge/category-slugs";
 
 const ownerPalette = ["#f59e0b", "#8b5cf6", "#10b981", "#0ea5e9", "#ef4444", "#f97316"];
 
@@ -399,6 +400,56 @@ export async function getKnowledgeOverview(search?: { q?: string; category?: str
     category,
     categoryCounts,
   };
+}
+
+export async function getKnowledgeCategoryPageData(slug: string) {
+  const category = categoryFromSlug(slug);
+  if (!category) return null;
+
+  const session = await requireManagerSession();
+  if (!session?.user?.id) return null;
+
+  const [documents, templates] = await Promise.all([
+    prisma.knowledgeDocument.findMany({
+      where: { category },
+      orderBy: { createdAt: "desc" },
+      include: {
+        createdBy: { select: { name: true } },
+        assessmentTemplate: { select: { id: true, title: true } },
+      },
+    }),
+    prisma.assessmentTemplate.findMany({
+      where: { enabled: true },
+      orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
+    }),
+  ]);
+
+  return { category, documents, templates, slug };
+}
+
+export async function getKnowledgeDocumentForEdit(id: string) {
+  const session = await requireManagerSession();
+  if (!session?.user?.id) return null;
+
+  const document = await prisma.knowledgeDocument.findUnique({
+    where: { id },
+    include: {
+      assessmentTemplate: { select: { id: true, title: true } },
+      createdBy: { select: { name: true } },
+    },
+  });
+
+  if (!document) return null;
+  if (!knowledgeCategories.includes(document.category as (typeof knowledgeCategories)[number])) {
+    return null;
+  }
+
+  const templates = await prisma.assessmentTemplate.findMany({
+    where: { enabled: true },
+    orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
+  });
+
+  return { document, session, templates };
 }
 
 export async function getAssessmentManagementData() {

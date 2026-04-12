@@ -313,7 +313,7 @@
   - `src/features/knowledge/pdf-ocr.ts`（OCR 主逻辑、环境变量读取）
   - `src/features/knowledge/ingestion.ts`（PDF 分支合并文字层与 OCR）
   - `next.config.ts`（`serverExternalPackages`）
-  - `.env.example`（参数说明）
+  - `.env.example`（参数说明；仓库已用 `.gitignore` 中 `!.env.example` 允许提交）
   - `docs/design/system-design.md` 第 24 节（产品/设计层说明 + 参数表）
 - 环境变量（详见设计文档与 `.env.example`）：
   - `PDF_OCR_DISABLE`：设为 `1` 关闭 OCR
