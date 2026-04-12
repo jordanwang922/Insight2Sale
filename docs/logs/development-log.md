@@ -22,6 +22,36 @@
 
 ## 当前记录
 
+### 2026-04-12 晚间
+
+- 本次目标：为知识库（及复用同一解析链路的测评资料上传）增加 PDF 内**图片文字**的 OCR，使扫描页、图文混排页中的文字进入 `rawText` 并参与切片与向量化；补充设计文档与交接说明；同步到 GitHub。
+- 完成内容：
+  - 新增 `src/features/knowledge/pdf-ocr.ts`：`pdfjs-dist`（legacy 构建）将页面渲染为位图，`@napi-rs/canvas` 出 PNG，`tesseract.js` 语言包 `chi_sim+eng` 整页 OCR
+  - 默认 `hybrid`：全文过短视为扫描件则多页 OCR；否则仅对「单页可选文字很少」的页做整页 OCR；`PDF_OCR_MODE=full` 可对前 `PDF_OCR_MAX_PAGES` 页逐页 OCR（图文混排更完整、更慢）
+  - `src/features/knowledge/ingestion.ts`：在原有 `pdf-parse` 文字层之后追加 `--- PDF 页面图像 OCR 补充 ---`；OCR 抛错时仍保留文字层，不阻断上传
+  - `next.config.ts`：`serverExternalPackages` 包含 `pdfjs-dist`、`@napi-rs/canvas`、`tesseract.js`
+  - 依赖：`pdfjs-dist@4.10.38`、`@napi-rs/canvas`、`tesseract.js@6.0.1`；`.env.example` 增加 OCR 相关注释；`.gitignore` 增加 `!.env.example` 以便示例文件可提交
+  - `docs/design/system-design.md` 新增「知识库 PDF OCR」设计说明（参数表与改法指引）；`docs/logs/handoff-log.md`、`docs/logs/development-log.md` 本条
+- 影响文件：
+  - `src/features/knowledge/pdf-ocr.ts`（新）
+  - `src/features/knowledge/ingestion.ts`
+  - `next.config.ts`
+  - `.env.example`
+  - `package.json` / `package-lock.json`
+  - `.gitignore`
+  - `.env.example`
+  - `docs/design/system-design.md`
+  - `docs/logs/development-log.md`
+  - `docs/logs/handoff-log.md`
+- 验证情况：
+  - `npm run build` 通过
+  - `npm test` 通过
+  - `npx eslint` 针对上述源码已跑过
+- 风险 / 注意事项：
+  - 首次 OCR 可能下载 Tesseract 语言包，首包较慢；`full` 大 PDF 易超时，需调参或异步任务
+  - `hybrid` 下「同一页大量文字 + 少量图内字」可能漏图，需设 `PDF_OCR_MODE=full`
+- 下一步建议：若生产环境超时，考虑队列/异步 OCR 或降低 `PDF_OCR_MAX_PAGES` / `PDF_OCR_RENDER_SCALE`。
+
 ### 2026-04-12 下午
 
 - 本次目标：修复主管知识库「检索与状态」中「保存」按钮被压成竖排字的问题；修复客户解读台「开场人设」两按钮在 13 寸屏上换行的问题；更新日志并确认本地可访问服务供验收。

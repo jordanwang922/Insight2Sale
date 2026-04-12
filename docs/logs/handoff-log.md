@@ -303,3 +303,24 @@
   - 浏览器访问 `http://localhost:3001`（与 README 中 `AUTH_URL` 端口一致）
   - 本轮尝试再起 `PORT=3001 npm run dev` 时若报 `EADDRINUSE`，说明该端口已有实例在跑，直接刷新页面即可，无需重复启动
   - **若使用 `npm run start`（生产模式）**：改代码后必须重新 `npm run build` 并重启 `next start`，否则页面仍是旧构建；`next dev` 则一般保存即热更新
+
+### 2026-04-12 晚间 知识库 PDF OCR
+
+- 能力说明：
+  - 上传 PDF 时除 `pdf-parse` 提取**可选文字层**外，对需要识别的页面做**整页渲染 + Tesseract OCR**（简体中文字 + 英文），结果追加到 `KnowledgeDocument.rawText` 再切片与向量化（`local-hash-v1` 不变）
+  - 测评资料上传若走同一 `extractKnowledgeText`，同样享受 OCR
+- 关键文件：
+  - `src/features/knowledge/pdf-ocr.ts`（OCR 主逻辑、环境变量读取）
+  - `src/features/knowledge/ingestion.ts`（PDF 分支合并文字层与 OCR）
+  - `next.config.ts`（`serverExternalPackages`）
+  - `.env.example`（参数说明）
+  - `docs/design/system-design.md` 第 24 节（产品/设计层说明 + 参数表）
+- 环境变量（详见设计文档与 `.env.example`）：
+  - `PDF_OCR_DISABLE`：设为 `1` 关闭 OCR
+  - `PDF_OCR_MODE`：`hybrid`（默认）或 `full`（每页都 OCR，更慢更全）
+  - `PDF_OCR_MAX_PAGES`、`PDF_OCR_RENDER_SCALE`、`PDF_OCR_MIN_PAGE_TEXT_CHARS`、`PDF_OCR_SHORT_DOC_THRESHOLD`
+- 后续接手改法：
+  - 调识别策略：改 `pdf-ocr.ts` 中 `needsFullOcr` / 跳过页逻辑
+  - 换语言：改 `createWorker("chi_sim+eng")` 或增加训练数据路径
+  - 换引擎：可替换 `extractPdfOcrText` 实现，保持 `ingestion.ts` 合并格式或约定
+- 已知风险：`full` OCR 大文件可能拖慢 Server Action；首启可能下载语言包；`hybrid` 可能漏「同页多文字 + 少量图内字」场景

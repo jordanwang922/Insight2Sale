@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
+import { extractPdfOcrText } from "@/features/knowledge/pdf-ocr";
 import { embedText, chunkKnowledgeText } from "@/features/knowledge/rag";
 
 const storageRoot = path.join(process.cwd(), "storage", "knowledge-base");
@@ -32,7 +33,24 @@ export async function extractKnowledgeText(file: File, buffer: Buffer) {
     const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
     await parser.destroy();
-    return result.text.trim();
+    const embedded = result.text.trim();
+
+    let ocr = "";
+    try {
+      ocr = await extractPdfOcrText(buffer);
+    } catch {
+      // OCR 依赖本机 worker/内存，失败时仍保留嵌入文字层，避免上传整体失败
+    }
+
+    if (!ocr) {
+      return embedded;
+    }
+
+    if (!embedded) {
+      return ocr;
+    }
+
+    return `${embedded}\n\n--- PDF 页面图像 OCR 补充 ---\n${ocr}`;
   }
 
   if (lowerName.endsWith(".docx")) {
