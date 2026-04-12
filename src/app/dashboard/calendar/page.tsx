@@ -43,63 +43,65 @@ export default async function CalendarPage({
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white">
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-sm font-medium text-slate-500">
-            {["周一", "周二", "周三", "周四", "周五", "周六", "周日"].map((label) => (
-              <div key={label} className="px-2 py-3">
-                {label}
-              </div>
-            ))}
-          </div>
-          <div className="grid">
-            {data.weeks.map((week, index) => (
-              <div key={index} className="grid grid-cols-7">
-                {week.map((day) => (
-                  <div
-                    key={day.isoDate}
-                    className={`min-h-44 border-b border-r border-slate-200 p-3 ${
-                      day.isCurrentMonth ? "bg-white" : "bg-slate-50/70"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-sm font-semibold ${
-                          day.isCurrentMonth ? "text-slate-950" : "text-slate-400"
-                        }`}
-                      >
-                        {day.dayNumber}
-                      </span>
-                      <Link
-                        href={`/dashboard/calendar?date=${day.isoDate}`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-slate-950 hover:text-slate-950"
-                      >
-                        +
-                      </Link>
-                    </div>
-
-                    <div className="mt-3 space-y-2">
-                      {day.appointments.map((appointment) => (
-                        <Link
-                          key={appointment.id}
-                          href={`/dashboard/calendar?date=${day.isoDate}&appointmentId=${appointment.id}`}
-                          className="block rounded-xl px-2 py-2 text-xs text-slate-700"
-                          style={{ backgroundColor: `${appointment.ownerColor}18` }}
+        <article className="overflow-x-auto rounded-[2rem] border border-slate-200 bg-white md:overflow-hidden">
+          <div className="min-w-[56rem] md:min-w-0">
+            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-sm font-medium text-slate-500">
+              {["周一", "周二", "周三", "周四", "周五", "周六", "周日"].map((label) => (
+                <div key={label} className="px-2 py-3">
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="grid">
+              {data.weeks.map((week, index) => (
+                <div key={index} className="grid grid-cols-7">
+                  {week.map((day) => (
+                    <div
+                      key={day.isoDate}
+                      className={`min-h-44 border-b border-r border-slate-200 p-3 ${
+                        day.isCurrentMonth ? "bg-white" : "bg-slate-50/70"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`text-sm font-semibold ${
+                            day.isCurrentMonth ? "text-slate-950" : "text-slate-400"
+                          }`}
                         >
-                          <p className="font-semibold text-slate-900">
-                            {format(appointment.startAt, "HH:mm")} {appointment.customerName}
-                          </p>
-                          <p className="mt-1">{appointment.title}</p>
-                          <p className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
-                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: appointment.ownerColor }} />
-                            {appointment.ownerName}
-                          </p>
+                          {day.dayNumber}
+                        </span>
+                        <Link
+                          href={`/dashboard/calendar?date=${day.isoDate}`}
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-slate-950 hover:text-slate-950"
+                        >
+                          +
                         </Link>
-                      ))}
+                      </div>
+
+                      <div className="mt-3 space-y-2">
+                        {day.appointments.map((appointment) => (
+                          <Link
+                            key={appointment.id}
+                            href={`/dashboard/calendar?date=${day.isoDate}&appointmentId=${appointment.id}`}
+                            className="block rounded-xl px-2 py-2 text-left text-xs leading-snug text-slate-700"
+                            style={{ backgroundColor: `${appointment.ownerColor}18` }}
+                          >
+                            <p className="font-semibold text-slate-900">
+                              {format(appointment.startAt, "HH:mm")} {appointment.customerName}
+                            </p>
+                            <p className="mt-1 break-words">{appointment.title}</p>
+                            <p className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+                              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: appointment.ownerColor }} />
+                              <span className="min-w-0 break-words">{appointment.ownerName}</span>
+                            </p>
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ))}
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </article>
 

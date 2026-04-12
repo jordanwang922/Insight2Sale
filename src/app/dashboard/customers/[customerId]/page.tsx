@@ -437,7 +437,7 @@ export default async function CustomerWorkspacePage({
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">知识库召回</p>
-        <h2 className="mt-4 whitespace-nowrap text-2xl font-semibold text-slate-950">
+        <h2 className="mt-4 min-w-0 break-words text-2xl font-semibold leading-snug text-slate-950">
           基于当前测评结果召回最相关内容
         </h2>
         <p className="mt-3 text-sm leading-7 text-slate-600">

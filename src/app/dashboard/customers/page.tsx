@@ -58,7 +58,109 @@ export default async function CustomersPage({
         </form>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-[1.5rem] border border-slate-200">
+      <div className="mt-8 md:hidden">
+        <div className="space-y-4">
+          {customers.map((customer) => {
+            const latestReport = customer.reports[0]
+              ? parseJson<{ parentType?: { name?: string } } | null>(customer.reports[0].reportData, null)
+              : null;
+
+            return (
+              <div
+                key={customer.id}
+                className="rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm shadow-sm"
+              >
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">客户</p>
+                    <p className="mt-1 font-semibold text-slate-950">{customer.wechatNickname}</p>
+                    <p className="mt-1 text-xs text-slate-500">{customer.phone ?? "未填写手机号"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">所属销售</p>
+                    <p className="mt-1 text-slate-700">{customer.owner.name}</p>
+                    {data.session.user.role === "MANAGER" ? (
+                      <form action={assignCustomerOwner} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input type="hidden" name="customerId" value={customer.id} />
+                        <select
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs"
+                          defaultValue={customer.ownerId}
+                          name="ownerId"
+                        >
+                          <option value={data.session.user.id}>主管自己跟进</option>
+                          {data.assignableSales.map((sales) => (
+                            <option key={sales.id} value={sales.id}>
+                              {sales.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          className="w-full shrink-0 rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 sm:w-auto"
+                          type="submit"
+                        >
+                          分配
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">当前状态</p>
+                      <p className="mt-1 text-slate-700">{customer.currentStatus?.name ?? "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">家长类型</p>
+                      <p className="mt-1 text-slate-700">{latestReport?.parentType?.name ?? "-"}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">核心问题</p>
+                    <p className="mt-1 break-words text-slate-700">{customer.coreProblem ?? "-"}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">下次预约</p>
+                      <p className="mt-1 text-slate-700">
+                        {customer.nextAppointment
+                          ? customer.nextAppointment.startAt.toLocaleString("zh-CN", {
+                              year: "numeric",
+                              month: "numeric",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">提交时间</p>
+                      <p className="mt-1 text-slate-700">
+                        {customer.submittedAt
+                          ? customer.submittedAt.toLocaleString("zh-CN", {
+                              year: "numeric",
+                              month: "numeric",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/dashboard/customers/${customer.id}`}
+                    className="flex w-full items-center justify-center rounded-full border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-950"
+                  >
+                    进入解读台
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-8 hidden overflow-hidden rounded-[1.5rem] border border-slate-200 md:block">
         <div className="grid grid-cols-[1.2fr_1fr_0.95fr_0.95fr_1.8fr_1fr_0.9fr_150px] bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-500">
           <div>客户</div>
           <div>所属销售</div>

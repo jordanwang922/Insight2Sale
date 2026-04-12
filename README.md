@@ -1,4 +1,4 @@
-# Insight2Sale v0.5.0
+# Insight2Sale v0.6.0
 
 智慧父母养育测评与销售转化 CRM。
 
@@ -6,6 +6,7 @@
 
 ## 当前版本范围
 
+- **v0.6.0**：销售后台手机端体验专项（顶栏与快捷入口、客户列表卡片化、团队日历横向滑动、复制测评链接降级与提示、知识库召回标题换行）；PC 端布局保持 `md:` 及以上断点不变
 - 家长端 H5 测评
 - 45 题测评题库、自动评分、9 类家长类型判断
 - 孩子/家长双雷达图与 6 维度解读
@@ -82,9 +83,9 @@ npm run start -- --port 3001
 
 ## 目录说明
 
-- 设计方案：[docs/design/system-design.md](/Users/jordanwang/YOLO/Insight2Sale/docs/design/system-design.md)
-- 开发日志：[docs/logs/development-log.md](/Users/jordanwang/YOLO/Insight2Sale/docs/logs/development-log.md)
-- 交接日志：[docs/logs/handoff-log.md](/Users/jordanwang/YOLO/Insight2Sale/docs/logs/handoff-log.md)
+- 设计方案：`docs/design/system-design.md`
+- 开发日志：`docs/logs/development-log.md`
+- 交接日志：`docs/logs/handoff-log.md`
 
 ## 当前注意事项
 

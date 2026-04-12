@@ -22,6 +22,34 @@
 
 ## 当前记录
 
+### 2026-04-12 v0.6.0 发布
+
+- 本次目标：发布 **v0.6.0**，汇总销售后台**手机端**体验改动；更新开发日志、交接日志、设计文档（§15.4 响应式补充）；将代码与文档推送到 GitHub。
+- 完成内容：
+  - **顶栏**（`DashboardTopbar`）：顾问姓名、角色标签与「退出登录」同一行左右分布，小屏姓名可换行，退出按钮始终靠右。
+  - **首页**：「我的客户」区块「查看全部」`shrink-0` + `whitespace-nowrap`，避免两字折行。
+  - **快捷入口**：复制测评链接支持 Clipboard API 失败时的 DOM 降级；成功/失败均有提示（小屏固定底部条）；「安排新的解读预约」等链接全宽居中。
+  - **客户管理**（`/dashboard/customers`）：`< md` 为卡片列表展示字段与全宽「进入解读台」；`md+` 保留原多列表格。
+  - **预约月历**（`/dashboard/calendar`）：月历主体小屏 `overflow-x-auto`，内层 `min-w-[56rem]`，列宽约原七等分的 2.5 倍量级，日程块支持 `break-words`。
+  - **客户解读台**：「知识库召回」主标题去掉 `whitespace-nowrap`，改为 `break-words` + `leading-snug`，避免窄屏溢出白框。
+  - 版本：`package.json` → `0.6.0`；`README.md` 版本说明与文档路径修正为相对路径。
+  - 设计：`docs/design/system-design.md` §15.4 增加 v0.6 已落实的移动端约定与实现注意点。
+- 影响文件：
+  - `src/components/dashboard/topbar.tsx`
+  - `src/app/dashboard/page.tsx`
+  - `src/components/dashboard/quick-actions.tsx`
+  - `src/app/dashboard/customers/page.tsx`
+  - `src/app/dashboard/calendar/page.tsx`
+  - `src/app/dashboard/customers/[customerId]/page.tsx`
+  - `package.json`
+  - `README.md`
+  - `docs/design/system-design.md`
+  - `docs/logs/development-log.md`
+  - `docs/logs/handoff-log.md`
+- 验证情况：`npm run build` 通过（发布前建议再执行一次）。
+- 风险 / 注意事项：HTTP 非安全上下文下剪贴板 API 可能不可用，已依赖降级路径；月历横向滚动需用户知情滑动。
+- 下一步建议：真机验收局域网 `AUTH_URL`；按需补 E2E 或 Playwright 快照。
+
 ### 2026-04-12 晚间
 
 - 本次目标：为知识库（及复用同一解析链路的测评资料上传）增加 PDF 内**图片文字**的 OCR，使扫描页、图文混排页中的文字进入 `rawText` 并参与切片与向量化；补充设计文档与交接说明；同步到 GitHub。

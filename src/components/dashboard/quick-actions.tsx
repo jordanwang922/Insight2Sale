@@ -23,11 +23,38 @@ export function QuickActions({
     (action) => !["assessment-open", "assessment-copy"].includes(action.key),
   );
 
+  async function copyToClipboard(text: string): Promise<boolean> {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      // 非 HTTPS 或权限失败时走降级
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
   async function handleCopy() {
     const link = `${window.location.origin}${assessmentHref}`;
-    await navigator.clipboard.writeText(link);
-    setCopyMessage("已复制测评链接，请发给客户。");
-    window.setTimeout(() => setCopyMessage(""), 2400);
+    const ok = await copyToClipboard(link);
+    setCopyMessage(
+      ok ? "已复制测评链接，请发给客户。" : `无法自动复制，请手动复制链接：${link}`,
+    );
+    window.setTimeout(() => setCopyMessage(""), ok ? 3200 : 8000);
   }
 
   return (
@@ -56,7 +83,10 @@ export function QuickActions({
       </div>
 
       {copyMessage ? (
-        <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <p
+          role="status"
+          className="fixed bottom-20 left-4 right-4 z-50 rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700 shadow-lg md:static md:inset-auto md:bottom-auto md:left-auto md:right-auto md:z-auto md:text-left md:shadow-none"
+        >
           {copyMessage}
         </p>
       ) : null}
@@ -66,7 +96,7 @@ export function QuickActions({
           <Link
             key={action.key}
             href={action.href ?? "#"}
-            className="rounded-2xl bg-slate-950 px-4 py-4 text-sm font-medium text-white transition hover:bg-slate-800"
+            className="flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-4 text-center text-sm font-medium text-white transition hover:bg-slate-800"
           >
             {action.label}
           </Link>

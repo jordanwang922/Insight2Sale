@@ -7,9 +7,9 @@
 
 ## 当前状态
 
-- 项目阶段：`v0.5.0` 发布前收尾
-- 当前目标：完成按钮交互修复、同步日志文档、建立独立仓库并推送到 `jordanwang922/Insight2Sale`
-- 当前路线：在现有可用版本基础上做发布级整理，而不是继续扩功能
+- 项目阶段：**`v0.6.0` 已发布**（销售后台手机端体验专项 + 文档同步）
+- 当前目标：真机验收手机端路径；后续按业务优先级迭代（E2E、embedding 升级、异步 AI 等）
+- 当前路线：在稳定版本上继续小步交付，重大 UI/流程变更同步更新 `docs/design/system-design.md`
 
 ## 已完成内容
 
@@ -43,13 +43,18 @@
 - 交接日志：
   - `docs/logs/handoff-log.md`
 
-## 下一步必须做的事
+## 下一步必须做的事（历史条目，仅供参考）
 
 1. 让用户审阅并确认 `docs/design/system-design.md`
 2. 基于设计方案输出详细实现计划
 3. 完整提取 45 道测评题、选项、分值、理论依据、得分逻辑、解析
 4. 确认技术栈并初始化项目结构
 5. 开始实现家长端测评、评分引擎、销售后台、主管总览
+
+**v0.6.0 后建议的即时动作**
+
+1. 手机浏览器访问局域网后台（与 `AUTH_URL` 一致），回归：首页顶栏、客户管理、日历滑动、复制链接、解读台知识库标题。
+2. 若改 UI：同步更新 `docs/design/system-design.md` §15.4 或相关章节。
 
 ## 已知风险
 
@@ -324,3 +329,16 @@
   - 换语言：改 `createWorker("chi_sim+eng")` 或增加训练数据路径
   - 换引擎：可替换 `extractPdfOcrText` 实现，保持 `ingestion.ts` 合并格式或约定
 - 已知风险：`full` OCR 大文件可能拖慢 Server Action；首启可能下载语言包；`hybrid` 可能漏「同页多文字 + 少量图内字」场景
+
+### v0.6.0 发布交接（2026-04-12）
+
+- **版本**：`package.json` 为 `0.6.0`；Git 标签 `v0.6.0`（推送后可用）。
+- **代码要点**：
+  - `topbar.tsx`：顶栏账号行布局
+  - `dashboard/page.tsx`：「查看全部」防折行
+  - `quick-actions.tsx`：复制降级 + 提示
+  - `customers/page.tsx`：小屏卡片 / 桌面表格
+  - `calendar/page.tsx`：月历横向滚动
+  - `customers/[customerId]/page.tsx`：知识库召回标题换行
+- **设计文档**：`docs/design/system-design.md` §15.4 已写入 v0.6 移动端约定。
+- **远端**：`origin` → `https://github.com/jordanwang922/Insight2Sale.git`，主分支 `main`。
