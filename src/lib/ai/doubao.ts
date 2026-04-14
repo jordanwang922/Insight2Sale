@@ -24,15 +24,19 @@ export async function generateDoubaoJson<T>(params: {
   system: string;
   user: string;
   temperature?: number;
+  /** 默认 ARK_TIMEOUT_MS；长文本摘要等可加大 */
+  timeoutMs?: number;
   fallback: T;
 }) {
   if (!isDoubaoConfigured()) {
     return params.fallback;
   }
 
+  const timeoutLimit = params.timeoutMs ?? requestTimeoutMs;
+
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutLimit);
     const response = await fetch(getChatCompletionUrl(), {
       method: "POST",
       headers: {

@@ -10,6 +10,7 @@ import { SopDocRichText } from "@/components/sales/sop-doc-rich-text";
 import { ParentTypeInterpretationText } from "@/components/sales/parent-type-interpretation-text";
 import { CallModeBriefText } from "@/components/sales/call-mode-brief-text";
 import { buildWorkspaceCallModeBrief } from "@/features/crm/call-mode-brief";
+import { CustomerCallRecordingBar } from "@/components/call-recording/customer-call-recording-bar";
 import { buildInterpretationDeskDisplayPieces } from "@/features/sales/sop-doc-pieces";
 import {
   applyInterpretationDeskLiveData,
@@ -159,8 +160,16 @@ export default async function CustomerWorkspacePage({
       <section className="min-w-0 space-y-4">
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
           <article className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">客户完整信息</p>
-            <h1 className="mt-2 text-lg font-semibold text-slate-950 sm:text-xl">{data.customer.wechatNickname}</h1>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">客户完整信息</p>
+                <h1 className="mt-2 text-lg font-semibold text-slate-950 sm:text-xl">{data.customer.wechatNickname}</h1>
+              </div>
+              <CustomerCallRecordingBar
+                customerId={data.customer.id}
+                customerLabel={data.customer.wechatNickname}
+              />
+            </div>
             <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
               {customerFacts.map(([label, value]) => (
                 <div

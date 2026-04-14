@@ -1,11 +1,22 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, CalendarDays, Settings, BarChart3, LibraryBig, DatabaseZap, ClipboardList } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  CalendarDays,
+  PhoneCall,
+  Settings,
+  BarChart3,
+  LibraryBig,
+  DatabaseZap,
+  ClipboardList,
+} from "lucide-react";
 import { auth } from "@/auth";
 
 const links = [
   { href: "/dashboard", label: "工作台", icon: LayoutDashboard },
   { href: "/dashboard/customers", label: "客户管理", icon: Users },
   { href: "/dashboard/calendar", label: "预约日历", icon: CalendarDays },
+  { href: "/dashboard/call-recordings", label: "通话管理", icon: PhoneCall },
   { href: "/dashboard/manager", label: "主管总览", icon: BarChart3 },
   { href: "/dashboard/assessments", label: "测评表管理", icon: ClipboardList },
   { href: "/dashboard/knowledge", label: "知识库管理", icon: DatabaseZap },
@@ -18,7 +29,16 @@ export async function DashboardSidebar() {
   const visibleLinks =
     session?.user.role === "MANAGER"
       ? links
-      : links.filter((link) => !["/dashboard/manager", "/dashboard/assessments", "/dashboard/knowledge", "/dashboard/templates", "/dashboard/settings/statuses"].includes(link.href));
+      : links.filter(
+          (link) =>
+            ![
+              "/dashboard/manager",
+              "/dashboard/assessments",
+              "/dashboard/knowledge",
+              "/dashboard/templates",
+              "/dashboard/settings/statuses",
+            ].includes(link.href),
+        );
 
   return (
     <aside

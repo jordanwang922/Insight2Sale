@@ -23,6 +23,20 @@
 
 ## 当前记录
 
+### 2026-04-15 v0.8.0 发布
+
+- 本次目标：发布 **v0.8.0**；将 **网页端通话录音 + 豆包语音妙记式转写 + 方舟纪要** 纳入产品与文档基线；开发 / 交接日志更新；代码推送 **main**。
+- 完成内容：
+  - **通话录音**：解读台宽屏 `CustomerCallRecordingBar`（MediaRecorder）→ `POST /api/call-recordings`，音频存 `storage/call-recordings/`。
+  - **转写**：优先 `transcribeWithDoubaoFlash`（`show_utterances`、分句入库 `transcriptSegmentsJson`）；备选 OpenAI Whisper；纪要 / 要点 `generateDoubaoJson`。
+  - **页面**：`/dashboard/call-recordings` 列表与侧边栏入口；详情页 `TranscriptTimeline`（时间轴、点击跳转播放、复制全文）；列表说明文案单行展示。
+  - **工程**：`postinstall` + `build` 前置 `prisma generate`；`prisma` 列入 `dependencies`；开发默认端口 **3001** 避免与本机其它服务抢 `3000`。
+  - **文档**：`docs/design/system-design.md` 新增 §11.5、§27；§21 待确认项更新；`README` 版本说明；脚本 `scripts/test-volc-speech-live.ts` 便于验收豆包语音。
+- 影响文件（摘）：`prisma/schema.prisma`、`prisma/migrations/*call_recording*`、`src/app/api/call-recordings/**`、`src/features/crm/call-recording-*.ts`、`src/lib/ai/doubao-speech.ts`、`src/components/call-recording/**`、`src/app/dashboard/call-recordings/**`、`package.json`、`docs/design/system-design.md`、`docs/logs/*`、`README.md`、`scripts/test-volc-speech-live.ts`
+- 验证情况：`npm test`、`npm run build`；豆包语音可用 `node --env-file=.env --import tsx scripts/test-volc-speech-live.ts` 实机联调（需有效 `VOLC_SPEECH_*`）。
+- 未完成项 / 风险：ECS / 生产须 **持久化 `storage` 或换对象存储**；数据库须执行迁移；勿将 `.env` 与录音提交仓库。
+- 下一步建议：阿里云部署时配置反代超时与磁盘；按需将录音迁 OSS/COS。
+
 ### 2026-04-13 v0.7.0 发布
 
 - 本次目标：发布 **v0.7.0**；工作台「家长类型解读」与「通话模式」与知识库 **Excel 矩阵**精确对齐（按列、按行，不混型）；开发/交接日志归档续写；代码推送 **main**。

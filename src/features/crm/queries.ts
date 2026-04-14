@@ -12,6 +12,7 @@ import {
 } from "@/features/knowledge/retrieval";
 import { knowledgeCategories } from "@/features/knowledge/categories";
 import { categoryFromSlug } from "@/features/knowledge/category-slugs";
+import { callRecordingListWhere } from "@/features/crm/call-recording-access";
 
 const ownerPalette = ["#f59e0b", "#8b5cf6", "#10b981", "#0ea5e9", "#ef4444", "#f97316"];
 
@@ -614,4 +615,46 @@ export async function getManagerOverview() {
       }).length,
     },
   };
+}
+
+/** 通话管理列表页：录音列表 + 可关联客户下拉数据 */
+export async function getCallRecordingsPageData() {
+  const session = await requireSession();
+  if (!session?.user?.id) return null;
+
+  const [items, customers] = await Promise.all([
+    prisma.callRecording.findMany({
+      where: callRecordingListWhere(session),
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        customer: { select: { id: true, wechatNickname: true } },
+        owner: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.customer.findMany({
+      where: session.user.role === "MANAGER" ? {} : { ownerId: session.user.id },
+      select: { id: true, wechatNickname: true },
+      orderBy: { updatedAt: "desc" },
+      take: 500,
+    }),
+  ]);
+
+  return { session, items, customers };
+}
+
+export async function getCallRecordingDetail(recordingId: string) {
+  const session = await requireSession();
+  if (!session?.user?.id) return null;
+
+  const recording = await prisma.callRecording.findFirst({
+    where: { id: recordingId, ...callRecordingListWhere(session) },
+    include: {
+      customer: { select: { id: true, wechatNickname: true, phone: true } },
+      owner: { select: { id: true, name: true } },
+    },
+  });
+
+  if (!recording) return null;
+  return { session, recording };
 }

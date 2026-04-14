@@ -31,6 +31,7 @@ model User {
   supplementalScripts SupplementalScript[]
   knowledgeDocuments KnowledgeDocument[]
   assessmentTemplates AssessmentTemplate[]
+  callRecordings CallRecording[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -89,6 +90,7 @@ model Customer {
   appointments             Appointment[]
   followUps                FollowUpNote[]
   supplementalScripts      SupplementalScript[]
+  callRecordings           CallRecording[]
   createdAt                DateTime              @default(now())
   updatedAt                DateTime              @updatedAt
 
@@ -322,4 +324,31 @@ model KnowledgeChunk {
   createdAt        DateTime         @default(now())
 
   @@index([documentId, chunkIndex])
+}
+
+/// 销售通话录音（网页端麦克风；解读台或通话管理页上传）
+model CallRecording {
+  id                String    @id @default(cuid())
+  ownerId           String
+  owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  startedAt         DateTime
+  endedAt           DateTime?
+  durationSeconds   Int?
+  audioFilePath     String
+  mimeType          String
+  sizeBytes         Int
+  transcript        String    @default("")
+  /** 妙记式分句：JSON 数组 { startMs,endMs,text,speakerId? }，与豆包 utterances 对齐 */
+  transcriptSegmentsJson String @default("[]")
+  summary           String    @default("")
+  highlightsJson    String    @default("[]")
+  processingStatus  String    @default("pending")
+  processingError   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([ownerId, createdAt])
+  @@index([customerId, createdAt])
 }

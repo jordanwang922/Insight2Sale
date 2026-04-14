@@ -1,4 +1,4 @@
-# Insight2Sale v0.7.0
+# Insight2Sale v0.8.0
 
 智慧父母养育测评与销售转化 CRM。
 
@@ -6,6 +6,7 @@
 
 ## 当前版本范围
 
+- **v0.8.0**：**网页端通话录音**（解读台宽屏）→ 豆包语音 **妙记式转写**（分句 + 时间轴）+ 方舟 **纪要/要点**；**通话管理**列表与详情、侧边栏入口；`prisma generate` 纳入 install/build；开发默认端口 **3001**；设计文档 §11.5 / §27、开发日志与交接日志已更新
 - **v0.7.0**：工作台「家长类型解读」与「通话模式」对齐知识库 Excel 矩阵（按当前养育类型列精确抽取，不混 9 型）；通话简报由矩阵「隐性风险 / 关键提醒」行 + 测评最弱维 + 倦怠/核心难题短句构成，关键词加粗展示；开发日志归档续写
 - **v0.6.0**：销售后台手机端体验专项（顶栏与快捷入口、客户列表卡片化、团队日历横向滑动、复制测评链接降级与提示、知识库召回标题换行）；PC 端布局保持 `md:` 及以上断点不变
 - 家长端 H5 测评
@@ -41,6 +42,11 @@ ARK_API_KEY="your-doubao-api-key"
 ARK_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
 ARK_MODEL="doubao-seed-1-6-251015"
 ARK_TIMEOUT_MS="8000"
+
+# 通话录音转写（火山豆包语音，与 ARK 密钥不同）
+# VOLC_SPEECH_APP_KEY="..."
+# VOLC_SPEECH_ACCESS_KEY="..."
+# VOLC_SPEECH_RESOURCE_ID="volc.bigasr.auc_turbo"
 ```
 
 ### 2. 启动 PostgreSQL
