@@ -1,20 +1,22 @@
 import { DimensionScore } from "@/features/assessment/types";
+import { cn } from "@/lib/utils";
 
 export function DimensionAnalysisGrid({
   dimensions,
+  className,
 }: {
   dimensions: DimensionScore[];
+  className?: string;
 }) {
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-6">
+    <section className={cn("rounded-[2rem] border border-slate-200 bg-white p-6", className)}>
       <h2 className="text-2xl font-semibold text-slate-950">各维度详细分析</h2>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {dimensions.map((dimension) => (
           <article key={dimension.name} className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="min-w-0 text-xl font-semibold leading-tight text-slate-950 md:text-2xl">
-                <span className="mr-2 inline-block align-middle">{dimension.icon}</span>
-                <span className="inline-block align-middle break-keep">{dimension.name}</span>
+              <p className="min-w-0 text-sm font-semibold leading-tight text-slate-950 md:text-base break-keep">
+                {dimension.name}
               </p>
               <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-500">
                 {dimension.level}

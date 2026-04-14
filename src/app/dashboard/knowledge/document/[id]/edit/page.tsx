@@ -104,8 +104,13 @@ export default async function EditKnowledgeDocumentPage({ params }: { params: Pr
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600">替换文件（可选，PDF / Word / 文本）</label>
-            <input className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3" name="file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <label className="text-xs font-medium text-slate-600">替换文件（可选，PDF / Word / Excel / 文本）</label>
+            <input
+              className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3"
+              name="file"
+              type="file"
+              accept=".pdf,.docx,.xlsx,.xls,.txt,.md"
+            />
             <p className="mt-1 text-xs text-slate-400">若选择新文件，将重新解析正文并覆盖上方正文（含 OCR）。</p>
           </div>
           <div className="flex flex-wrap gap-3 pt-2">

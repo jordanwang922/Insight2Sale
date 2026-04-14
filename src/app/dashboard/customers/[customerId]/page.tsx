@@ -1,15 +1,24 @@
 import { addFollowUpNote } from "@/server/actions/customer";
 import { createAppointment } from "@/server/actions/appointments";
 import { updateCustomerStatus } from "@/server/actions/statuses";
-import {
-  importPersonaLibraryToOpeningStyle,
-  savePersonaProfile,
-  submitTemplateSnippet,
-} from "@/server/actions/templates";
+import { savePersonaProfile } from "@/server/actions/templates";
 import { getCustomerWorkspace } from "@/features/crm/queries";
-import { RadarChartCard } from "@/components/charts/radar-chart-card";
+import { CustomerWorkspaceRadars } from "@/components/dashboard/customer-workspace-radars";
 import { DimensionAnalysisGrid } from "@/components/assessment/dimension-analysis-grid";
 import { generateWorkspaceAiOutput } from "@/features/crm/ai";
+import { SopDocRichText } from "@/components/sales/sop-doc-rich-text";
+import { ParentTypeInterpretationText } from "@/components/sales/parent-type-interpretation-text";
+import { CallModeBriefText } from "@/components/sales/call-mode-brief-text";
+import { buildWorkspaceCallModeBrief } from "@/features/crm/call-mode-brief";
+import { buildInterpretationDeskDisplayPieces } from "@/features/sales/sop-doc-pieces";
+import {
+  applyInterpretationDeskLiveData,
+  buildChildDescriptorForHeartLine,
+  formatChildAgeForDesk,
+  inferSchoolStageFromChildAgeRanges,
+  pickWeakestDimensionNameForDesk,
+} from "@/features/sales/interpretation-desk-live-data";
+import { buildInterpretationDeskMarkdownForDisplay } from "@/features/sales/interpretation-desk-template";
 import { parseJson } from "@/lib/utils";
 
 function formatMaybeList(value?: string | null) {
@@ -27,7 +36,10 @@ export default async function CustomerWorkspacePage({
   const data = await getCustomerWorkspace(customerId);
   if (!data) return null;
 
+  const kb = data.kbWorkspaceInterpretation;
   const report = data.reportData;
+  /** 知识库《解读台模版.pdf》切片；缺省用仓库内从该 PDF 导出的纯文本 */
+  const deskChunks = data.knowledge.interpretationDeskTemplate;
   const aiOutput = report
     ? await generateWorkspaceAiOutput({
         customerName: data.customer.wechatNickname,
@@ -45,32 +57,39 @@ export default async function CustomerWorkspacePage({
       })
     : null;
 
+  const weakestChildDimension =
+    report?.dimensionScores?.length
+      ? [...report.dimensionScores].sort((a, b) => a.childPercent - b.childPercent)[0]!.name
+      : report?.salesSummary?.weakestDimension ?? "关键维度";
+
+  const callModeBrief =
+    report != null
+      ? await buildWorkspaceCallModeBrief({
+          parentTypeName: report.parentType.name,
+          assessmentTemplateId: data.customer.assessments[0]?.templateId ?? undefined,
+          weakestDimension: weakestChildDimension,
+          burnoutPercent: report.burnout.percent,
+          coreProblem: data.customer.coreProblem ?? "",
+        })
+      : null;
+
   const latestAppointments = data.customer.appointments.slice(0, 6);
   const latestTransitions = data.customer.statusTransitions.slice(0, 6);
-  const supplementalBySection = new Map<string, typeof data.customer.supplementalScripts>();
-  for (const item of data.customer.supplementalScripts) {
-    const bucket = supplementalBySection.get(item.sectionKey) ?? [];
-    bucket.push(item);
-    supplementalBySection.set(item.sectionKey, bucket);
-  }
 
-  const sopSections = aiOutput?.sopSteps?.length
-    ? aiOutput.sopSteps.map((step, index) => ({
-        key: `sop-${index + 1}`,
-        title: step.title,
-        content: step.content,
-      }))
-    : [
-        {
-          key: "open",
-          title: "1. 开场建立信任",
-          content:
-            "先说明今天是一起看报告，不做评判，重点是帮家长看清楚孩子当下卡点、家庭支持方式，以及下一步更稳的方向。",
-        },
-      ];
-  const openingPersonaText =
-    data.persona?.openingStyle ||
-    `${data.persona?.displayTitle ?? "帆书家庭教育顾问"}您好，今天我们一起看这份测评结果。重点不是评判谁做得好不好，而是帮您看清楚孩子现在卡在哪里，以及接下来怎么走会更稳。`;
+  const deskDisplayMarkdown = buildInterpretationDeskMarkdownForDisplay(deskChunks);
+  const deskWithLive = applyInterpretationDeskLiveData(deskDisplayMarkdown, {
+    consultantName: data.session.user.name ?? data.session.user.email ?? "顾问",
+    childAgeDisplay: formatChildAgeForDesk(data.customer.childAgeRanges),
+    gradeStageDisplay: inferSchoolStageFromChildAgeRanges(data.customer.childAgeRanges),
+    coreConcernDisplay: data.customer.coreProblem ?? "",
+    childDescriptorForHeartLine: buildChildDescriptorForHeartLine(data.customer.childAgeRanges),
+    weakestDimensionName: pickWeakestDimensionNameForDesk(report),
+  });
+  const interpretationDeskPieces = await buildInterpretationDeskDisplayPieces(deskWithLive);
+  const assessmentHref =
+    data.customer.assessments[0]?.template?.slug != null
+      ? `/assessment/${data.customer.assessments[0].template.slug}`
+      : "/assessment";
 
   const customerFacts = [
     ["微信昵称", data.customer.wechatNickname],
@@ -96,17 +115,19 @@ export default async function CustomerWorkspacePage({
     ["希望支持", formatMaybeList(data.customer.desiredSupport)],
   ];
 
-  const knowledgeSections: Array<{
-    title: string;
-    items: Array<{ id: string; title: string; content: string; score: number }>;
-  }> = [
-    { title: "测评解读库", items: data.knowledge.interpretation },
-    { title: "课程体系库", items: data.knowledge.courses },
-    { title: "专家话术库", items: data.knowledge.scripts },
-    { title: "案例库", items: data.knowledge.cases },
-    { title: "禁用表达库", items: data.knowledge.forbidden },
-    { title: "关键词与风格库", items: data.knowledge.style },
-  ];
+  /** 窄栏内两列栅格：长文案通栏；职业描述与职业类别并排 */
+  function customerFactCellClass(label: string): string {
+    if (
+      label === "核心难题" ||
+      label === "核心担心" ||
+      label === "尝试做法" ||
+      label === "尝试效果" ||
+      label === "希望支持"
+    ) {
+      return "sm:col-span-2";
+    }
+    return "";
+  }
 
   return (
     <div className="space-y-6">
@@ -115,19 +136,15 @@ export default async function CustomerWorkspacePage({
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">通话模式</p>
             <h2 className="mt-3 text-2xl font-semibold text-slate-950">一边通话，一边按步骤推进</h2>
-            <p className="mt-3 text-sm leading-7 text-slate-700">
-              当前建议先从
-              <span className="mx-1 font-semibold text-slate-950">
-                {aiOutput?.callMode.focusDimension ?? report?.salesSummary?.weakestDimension ?? "关键维度"}
-              </span>
-              切入。风险提示是：
-              <span className="mx-1 font-semibold text-slate-950">
-                {aiOutput?.callMode.riskSignal ?? report?.salesSummary?.riskSignal ?? "待系统计算"}
-              </span>
-            </p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
-              {aiOutput?.callMode.summary ?? report?.matchAnalysis ?? "待生成客户解读摘要。"}
-            </p>
+            {report && callModeBrief ? (
+              <div className="mt-3">
+                <CallModeBriefText segments={callModeBrief.segments} />
+              </div>
+            ) : (
+              <p className="mt-3 text-sm leading-7 text-slate-600">
+                完成测评并上传 9 型矩阵解读 Excel 后，此处将结合最弱维与当前类型给出短通话建议。
+              </p>
+            )}
           </div>
           <div className="rounded-[1.5rem] bg-white p-5 shadow-sm">
             <p className="text-lg font-semibold text-slate-950">快速记录建议</p>
@@ -138,54 +155,80 @@ export default async function CustomerWorkspacePage({
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[0.78fr_1.4fr_1.05fr]">
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">客户完整信息</p>
-          <h1 className="mt-4 text-2xl font-semibold text-slate-950">{data.customer.wechatNickname}</h1>
-          <div className="mt-5 grid gap-3">
-            {customerFacts.map(([label, value]) => (
-              <div key={label} className="rounded-2xl bg-slate-50 px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-700">{value}</p>
-              </div>
-            ))}
-          </div>
+      {/* 左：客户信息吃满剩余宽度；右：双雷达 + 各维度分析整体靠右贴齐，不留右侧空白 */}
+      <section className="min-w-0 space-y-4">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+          <article className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">客户完整信息</p>
+            <h1 className="mt-2 text-lg font-semibold text-slate-950 sm:text-xl">{data.customer.wechatNickname}</h1>
+            <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {customerFacts.map(([label, value]) => (
+                <div
+                  key={label}
+                  className={`min-w-0 rounded-lg bg-slate-50 px-2 py-1.5 ${customerFactCellClass(label)}`}
+                >
+                  <p className="text-[0.58rem] uppercase tracking-[0.1em] text-slate-400">{label}</p>
+                  <p className="mt-0.5 text-xs leading-[1.35] text-slate-700">{value}</p>
+                </div>
+              ))}
+            </div>
 
-          <form action={updateCustomerStatus} className="mt-6 space-y-3">
-            <input type="hidden" name="customerId" value={data.customer.id} />
-            <label className="block text-sm font-medium text-slate-900">
-              更新客户状态
-              <select
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"
-                name="toStatusId"
-                defaultValue={data.customer.currentStatusId ?? ""}
-              >
-                {data.statuses.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <textarea
-              className="min-h-24 w-full rounded-2xl border border-slate-200 px-4 py-3"
-              name="notes"
-              placeholder="补充这次状态变更说明"
+            <form action={updateCustomerStatus} className="mt-4 space-y-3">
+              <input type="hidden" name="customerId" value={data.customer.id} />
+              <label className="block text-sm font-medium text-slate-900">
+                更新客户状态
+                <select
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm"
+                  name="toStatusId"
+                  defaultValue={data.customer.currentStatusId ?? ""}
+                >
+                  {data.statuses.map((status) => (
+                    <option key={status.id} value={status.id}>
+                      {status.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <textarea
+                className="min-h-20 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm"
+                name="notes"
+                placeholder="补充这次状态变更说明"
+              />
+              <button className="w-full rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">
+                保存状态
+              </button>
+            </form>
+          </article>
+
+          <div className="flex min-h-0 w-full min-w-0 flex-col gap-3 lg:h-full lg:w-[33.8rem] lg:max-w-full lg:shrink-0 lg:justify-self-end">
+            <CustomerWorkspaceRadars
+              childRadar={data.childRadar}
+              parentRadar={data.parentRadar}
+              inlineGridClassName="grid min-h-0 flex-1 grid-cols-2 gap-3"
             />
-            <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
-              保存状态
-            </button>
-          </form>
+            {report ? (
+              <div className="max-h-[min(32rem,50vh)] w-full shrink-0 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] lg:max-h-none lg:overflow-visible">
+                <DimensionAnalysisGrid
+                  dimensions={report.dimensionScores}
+                  className="p-4 sm:p-5 [&_h2]:text-lg"
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <article className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">解读SOP</p>
+          <div className="mt-4 min-w-0 rounded-2xl border border-slate-200 bg-white px-2 py-3 shadow-sm sm:px-4">
+            <SopDocRichText
+              interpretationDesk
+              assessmentHref={assessmentHref}
+              pieces={interpretationDeskPieces}
+            />
+          </div>
         </article>
 
-        <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <RadarChartCard title="孩子 6 维度雷达图" color="#10b981" data={data.childRadar} />
-            <RadarChartCard title="家长 6 维度雷达图" color="#6366f1" data={data.parentRadar} />
-          </div>
-
-          {report ? <DimensionAnalysisGrid dimensions={report.dimensionScores} /> : null}
-
+        <div className="min-w-0 space-y-4">
           <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
@@ -201,11 +244,31 @@ export default async function CustomerWorkspacePage({
               ) : null}
             </div>
             <h2 className="mt-5 text-2xl font-semibold text-slate-950">
-              {report?.salesSummary?.headline ?? "等待测评报告"}
+              {report?.salesSummary?.headline?.trim() ||
+                (kb?.parentTypeSnippet
+                  ? `${report?.parentType?.name ?? "家长类型"} · 类型解读`
+                  : null) ||
+                aiOutput?.callMode.headline?.trim() ||
+                "等待测评报告"}
             </h2>
-            <p className="mt-4 text-sm leading-7 text-slate-600">
-              {report?.matchAnalysis ?? "当前客户还没有生成完整测评报告，请先完成家长测评或补齐报告数据。"}
-            </p>
+            <div className="mt-4 text-sm leading-7 text-slate-600">
+              {kb?.parentTypeSnippet?.trim() ? (
+                <ParentTypeInterpretationText text={kb.parentTypeSnippet} />
+              ) : report?.matchAnalysis?.trim() ? (
+                <p className="whitespace-pre-line">{report.matchAnalysis}</p>
+              ) : aiOutput?.callMode.extendedBrief?.trim() ? (
+                <p className="whitespace-pre-line">{aiOutput.callMode.extendedBrief}</p>
+              ) : (
+                <p>当前客户还没有生成完整测评报告，请先完成家长测评或补齐报告数据。</p>
+              )}
+            </div>
+            {aiOutput?.callMode.salesHooks?.length ? (
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-7 text-slate-700">
+                {aiOutput.callMode.salesHooks.map((hook, index) => (
+                  <li key={index}>{hook}</li>
+                ))}
+              </ul>
+            ) : null}
             <div className="mt-6 grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-slate-500">教育焦虑</p>
@@ -222,142 +285,26 @@ export default async function CustomerWorkspacePage({
             </div>
           </article>
 
-          <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">维度解读</p>
-            <div className="mt-5 grid gap-4">
-              {(aiOutput?.dimensionInterpretations ?? []).length
-                ? aiOutput?.dimensionInterpretations.map((dimension) => (
-                    <div key={dimension.name} className="rounded-2xl bg-slate-50 px-4 py-4">
-                      <p className="text-base font-semibold text-slate-950">{dimension.name}</p>
-                      <p className="mt-3 text-sm leading-7 text-slate-600">{dimension.childInterpretation}</p>
-                      <p className="mt-2 text-sm leading-7 text-slate-600">{dimension.parentInterpretation}</p>
-                      <p className="mt-2 text-sm leading-7 text-slate-600">{dimension.gapInterpretation}</p>
-                    </div>
-                  ))
-                : report?.dimensionScores.map((dimension) => (
-                    <div key={dimension.name} className="rounded-2xl bg-slate-50 px-4 py-4">
-                      <p className="text-base font-semibold text-slate-950">{dimension.name}</p>
-                      <p className="mt-3 text-sm leading-7 text-slate-600">
-                        孩子得分 {dimension.childPercent}%，家长得分 {dimension.parentPercent}%，差值 {dimension.gap}。
-                      </p>
-                    </div>
-                  ))}
-            </div>
-          </article>
-        </div>
-
-        <div className="space-y-4">
-          <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">SOP 解读台</p>
-            <div className="mt-5 space-y-5">
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-base font-semibold text-slate-950">开场人设</p>
-                <textarea
-                  form="save-opening-style"
-                  className="mt-3 min-h-32 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-700"
-                  name="openingStyle"
-                  defaultValue={openingPersonaText}
-                />
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
-                  <form id="save-opening-style" action={savePersonaProfile}>
-                    <input type="hidden" name="userId" value={data.customer.ownerId} />
-                    <input type="hidden" name="customerId" value={data.customer.id} />
-                    <button
-                      type="submit"
-                      className="w-full whitespace-nowrap rounded-2xl border border-slate-300 px-1.5 py-2.5 text-[11px] font-medium leading-tight text-slate-700 sm:px-2 sm:text-xs"
-                    >
-                      保存开场人设
-                    </button>
-                  </form>
-                  <form action={importPersonaLibraryToOpeningStyle}>
-                    <input type="hidden" name="userId" value={data.customer.ownerId} />
-                    <input type="hidden" name="customerId" value={data.customer.id} />
-                    <button
-                      type="submit"
-                      className="w-full whitespace-nowrap rounded-2xl border border-slate-300 px-1.5 py-2.5 text-[11px] font-medium leading-tight text-slate-700 sm:px-2 sm:text-xs"
-                    >
-                      导入个人文案库
-                    </button>
-                  </form>
-                </div>
+          {report ? (
+            <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
+              <p className="text-base font-semibold text-slate-950">课程挂钩</p>
+              <p className="mt-2 text-sm leading-7 text-slate-500">
+                当前推荐由 AI 结合测评结果、RAG 知识库和课程模块逻辑生成，不同家长结果会不同。
+              </p>
+              <div className="mt-3 space-y-3">
+                {(aiOutput?.courseRecommendations?.length
+                  ? aiOutput.courseRecommendations
+                  : report?.courseRecommendations ?? []
+                ).map((item: { module: string; reason: string; talkingPoint: string }) => (
+                  <div key={item.module} className="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p className="font-medium text-slate-950">{item.module}</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{item.reason}</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-500">{item.talkingPoint}</p>
+                  </div>
+                ))}
               </div>
-
-              {sopSections.map((section) => (
-                <div key={section.key} className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <p className="text-base font-semibold text-slate-950">{section.title}</p>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">{section.content}</p>
-
-                  {supplementalBySection.get(section.key)?.length ? (
-                    <div className="mt-4 space-y-3">
-                      {(supplementalBySection.get(section.key) ?? []).map((item) => (
-                        <div key={item.id} className="rounded-2xl bg-white px-4 py-4">
-                          <p className="text-sm font-semibold text-slate-950">
-                            {item.author.name} 的补充话术
-                          </p>
-                          <p className="mt-2 text-sm leading-7 text-slate-600">{item.content}</p>
-                          <p className="mt-2 text-xs text-slate-400">
-                            {item.createdAt.toLocaleString("zh-CN")}
-                            {item.approvedToTemplate ? " · 已进入高价值模板池" : ""}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  <form action={submitTemplateSnippet} className="mt-4 space-y-3">
-                    <input type="hidden" name="customerId" value={data.customer.id} />
-                    <input type="hidden" name="title" value={`${section.title}补充话术`} />
-                    <input type="hidden" name="sectionKey" value={section.key} />
-                    <input type="hidden" name="sectionTitle" value={section.title} />
-                    <input
-                      type="hidden"
-                      name="applicableDimension"
-                      value={aiOutput?.callMode.focusDimension ?? report?.salesSummary?.weakestDimension ?? ""}
-                    />
-                    <input
-                      type="hidden"
-                      name="applicableParentType"
-                      value={report?.parentType?.name ?? ""}
-                    />
-                    <input
-                      type="hidden"
-                      name="applicableStage"
-                      value={data.customer.currentStatus?.name ?? ""}
-                    />
-                    <textarea
-                      className="min-h-24 w-full rounded-2xl border border-slate-200 px-4 py-3"
-                      name="content"
-                      placeholder="补充你自己更顺手、转化更高的话术。提交后先保存在你自己的补充话术里，主管审核后才会进入共享模板库。"
-                    />
-                    <button className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700">
-                      补充话术
-                    </button>
-                  </form>
-                </div>
-              ))}
-
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-base font-semibold text-slate-950">课程挂钩</p>
-                <p className="mt-2 text-sm leading-7 text-slate-500">
-                  当前推荐由 AI 结合测评结果、RAG 知识库和课程模块逻辑生成，不同家长结果会不同。
-                </p>
-                <div className="mt-3 space-y-3">
-                  {(aiOutput?.courseRecommendations?.length
-                    ? aiOutput.courseRecommendations
-                    : report?.courseRecommendations ?? []
-                  ).map(
-                    (item: { module: string; reason: string; talkingPoint: string }) => (
-                      <div key={item.module} className="rounded-2xl bg-white px-4 py-4">
-                        <p className="font-medium text-slate-950">{item.module}</p>
-                        <p className="mt-2 text-sm leading-7 text-slate-600">{item.reason}</p>
-                        <p className="mt-2 text-sm leading-7 text-slate-500">{item.talkingPoint}</p>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </div>
-            </div>
-          </article>
+            </article>
+          ) : null}
         </div>
       </section>
 
@@ -433,42 +380,6 @@ export default async function CustomerWorkspacePage({
             )}
           </div>
         </article>
-      </section>
-
-      <section className="rounded-[2rem] border border-slate-200 bg-white p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">知识库召回</p>
-        <h2 className="mt-4 min-w-0 break-words text-2xl font-semibold leading-snug text-slate-950">
-          基于当前测评结果召回最相关内容
-        </h2>
-        <p className="mt-3 text-sm leading-7 text-slate-600">
-          系统会根据当前客户的薄弱维度、教养类型、阶段状态和核心问题，从知识库里自动召回最相关的课程、话术与风险提示，辅助销售解读和衔接课程。
-        </p>
-        <div className="mt-6 grid gap-4 xl:grid-cols-3">
-          {knowledgeSections.map(({ title, items }) => (
-            <article key={title} className="rounded-[1.5rem] bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-950">{title}</p>
-              <div className="mt-4 space-y-3">
-                {items.length ? (
-                  items.map((item) => (
-                    <div key={item.id} className="rounded-2xl bg-white px-4 py-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-slate-950">{item.title}</p>
-                        <span className="whitespace-nowrap text-xs text-slate-400">
-                          相关度 {Math.round(item.score * 100)}%
-                        </span>
-                      </div>
-                      <p className="mt-3 text-sm leading-7 text-slate-600">{item.content}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="rounded-2xl bg-white px-4 py-4 text-sm text-slate-500">
-                    当前分类下还没有可用知识，建议主管先补充资料。
-                  </p>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">

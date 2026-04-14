@@ -4,7 +4,12 @@ import { parseJson } from "@/lib/utils";
 import { toRadarData } from "@/features/assessment/report";
 import { AssessmentReport } from "@/features/assessment/types";
 import { buildMonthCalendar } from "@/features/crm/calendar";
-import { retrieveKnowledge } from "@/features/knowledge/retrieval";
+import { buildKbWorkspaceInterpretation } from "@/features/knowledge/interpretation-lookup";
+import {
+  retrieveKnowledge,
+  retrieveKnowledgeChunksForDocument,
+  type RetrievedKnowledge,
+} from "@/features/knowledge/retrieval";
 import { knowledgeCategories } from "@/features/knowledge/categories";
 import { categoryFromSlug } from "@/features/knowledge/category-slugs";
 
@@ -188,11 +193,16 @@ export async function getCustomerWorkspace(customerId: string) {
   const assessmentTemplateId = customer.assessments[0]?.templateId ?? undefined;
 
   const knowledgeFilter = assessmentTemplateId ? { assessmentTemplateId } : {};
+  const dimensionNames =
+    reportData && Array.isArray(reportData.dimensionScores) && reportData.dimensionScores.length > 0
+      ? reportData.dimensionScores.map((d) => d.name)
+      : ["需求", "接纳情绪", "沟通", "家庭系统", "自律", "自主"];
+
   const knowledgeResults = await Promise.all([
     retrieveKnowledge({
-      query: `${weakestDimension} ${problem} ${parentType} 的测评解读`,
+      query: `${weakestDimension} ${problem} ${parentType} 的测评解读 家庭风险 沟通策略`,
       categories: ["测评解读库"],
-      limit: 2,
+      limit: 8,
       ...knowledgeFilter,
     }),
     retrieveKnowledge({
@@ -226,6 +236,25 @@ export async function getCustomerWorkspace(customerId: string) {
       ...knowledgeFilter,
     }),
   ]);
+
+  const interpretationDeskTemplate = await retrieveKnowledgeChunksForDocument({
+    category: "测评解读库",
+    /** 知识库管理 · 测评解读库 ·《解读台模版.pdf》 */
+    titleContains: "解读台模版",
+    assessmentTemplateId,
+  });
+
+  /** 工作台「家长类型 + 六维高中低」：在测评解读库按类型/分档精确取句，不再用向量拼接 */
+  const kbWorkspaceInterpretation =
+    reportData && Array.isArray(reportData.dimensionScores) && reportData.dimensionScores.length > 0
+      ? await buildKbWorkspaceInterpretation({
+          parentTypeName: reportData.parentType?.name ?? "",
+          dimensionScores: reportData.dimensionScores,
+          assessmentTemplateId,
+        })
+      : null;
+
+  const interpretationByDimension = dimensionNames.map(() => [] as RetrievedKnowledge[]);
 
   return {
     session,
@@ -264,7 +293,10 @@ export async function getCustomerWorkspace(customerId: string) {
       forbidden: knowledgeResults[3],
       style: knowledgeResults[4],
       cases: knowledgeResults[5],
+      interpretationByDimension,
+      interpretationDeskTemplate,
     },
+    kbWorkspaceInterpretation,
   };
 }
 
@@ -372,12 +404,28 @@ export async function getKnowledgeOverview(search?: { q?: string; category?: str
           }
         : {}),
     },
-    include: {
+    // 列表不返回 rawText，避免单条知识体积过大拖垮页面；检索仍可按 rawText 过滤
+    select: {
+      id: true,
+      title: true,
+      summary: true,
+      category: true,
+      tagsJson: true,
+      sourceType: true,
+      enabled: true,
+      fileName: true,
+      metadataJson: true,
+      createdAt: true,
       createdBy: true,
       assessmentTemplate: true,
       chunks: {
         orderBy: { chunkIndex: "asc" },
         take: 2,
+        select: {
+          id: true,
+          chunkIndex: true,
+          content: true,
+        },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -413,7 +461,17 @@ export async function getKnowledgeCategoryPageData(slug: string) {
     prisma.knowledgeDocument.findMany({
       where: { category },
       orderBy: { createdAt: "desc" },
-      include: {
+      // 列表页不要 select rawText：大 PDF 文本可达数 MB，会撑爆 RSC 响应导致 500
+      select: {
+        id: true,
+        title: true,
+        summary: true,
+        tagsJson: true,
+        sourceType: true,
+        enabled: true,
+        fileName: true,
+        createdAt: true,
+        updatedAt: true,
         createdBy: { select: { name: true } },
         assessmentTemplate: { select: { id: true, title: true } },
       },

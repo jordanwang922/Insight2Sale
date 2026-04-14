@@ -1,14 +1,20 @@
 import { generateDoubaoJson } from "@/lib/ai/doubao";
 import { AssessmentReport, DimensionScore } from "@/features/assessment/types";
+import { sanitizeKnowledgeChunkBody } from "@/features/knowledge/chunk-sanitize";
 import { RetrievedKnowledge } from "@/features/knowledge/retrieval";
+import type { InterpretationSopStep } from "@/features/sales/interpretation-sop";
 
-interface WorkspaceKnowledge {
+export interface WorkspaceKnowledge {
   interpretation: RetrievedKnowledge[];
   courses: RetrievedKnowledge[];
   scripts: RetrievedKnowledge[];
   forbidden: RetrievedKnowledge[];
   style: RetrievedKnowledge[];
   cases: RetrievedKnowledge[];
+  /** 与当前报告维度顺序一一对应，每条为「测评解读库」中该维度的检索切片 */
+  interpretationByDimension: RetrievedKnowledge[][];
+  /** 《解读台模版.pdf》整文档切片（按顺序），供解读台与口播步骤对齐 */
+  interpretationDeskTemplate: RetrievedKnowledge[];
 }
 
 export interface WorkspaceAiOutput {
@@ -16,6 +22,12 @@ export interface WorkspaceAiOutput {
     focusDimension: string;
     riskSignal: string;
     summary: string;
+    /** 图二主标题，可改写知识库表述，默认可与报告 headline 一致 */
+    headline?: string;
+    /** 图二长文案：综合测评解读库，供销售直接照读或微调 */
+    extendedBrief?: string;
+    /** 高转化销售话术要点（短句列表） */
+    salesHooks?: string[];
   };
   sopSteps: Array<{
     title: string;
@@ -42,12 +54,48 @@ function buildFallback(
     weakestDimension?: string;
     courseTalk?: string;
   },
+  sopParsedSteps?: InterpretationSopStep[],
 ): WorkspaceAiOutput {
   const weakest = [...report.dimensionScores].sort((a, b) => a.childPercent - b.childPercent)[0];
   const focusDimension = context?.weakestDimension || weakest?.name || "沟通";
   const courseTalk =
     context?.courseTalk || report.courseRecommendations[0]?.talkingPoint || "说明为什么当前模块更适合他，而不是直接推销。";
   const problemText = context?.coreProblem || "当前的具体育儿问题";
+
+  const defaultFiveSteps = [
+    {
+      title: "1. 开场建立权威",
+      content: `先说明今天是一起看报告，不做评判，重点是帮家长看清“${problemText}”背后的真正卡点和下一步方法。`,
+    },
+    {
+      title: "2. 代入感确认",
+      content: `先围绕“${focusDimension}”询问家长最有感受的场景，让对方先说，优先让家长自己描述“${problemText}”最困扰的瞬间。`,
+    },
+    {
+      title: "3. 解读优势与卡点",
+      content: `先给家长看到孩子已有优势，再自然进入“${focusDimension}”为什么会持续拖住“${problemText}”的现实卡点和长期风险。`,
+    },
+    {
+      title: "4. 连接课程模块",
+      content: courseTalk,
+    },
+    {
+      title: "5. 推进下一动作",
+      content: `根据家长当前意愿，推进 1V1 深聊、直播、试听或后续跟进，但始终围绕“${problemText}”如何被解决来收口。`,
+    },
+  ];
+
+  const sopSteps =
+    sopParsedSteps && sopParsedSteps.length > 0
+      ? sopParsedSteps.map((step) => ({
+          title: step.title,
+          content:
+            step.content.length > 900
+              ? `${step.content.slice(0, 900)}…\n\n（以上为知识库《解读台模版》原文节录；若上方未显示 AI 个性化话术，请按原文结合本客户现场口播。）`
+              : `${step.content}\n\n（以上为知识库《解读台模版》原文；若上方未显示 AI 个性化话术，请按原文结合本客户现场口播。）`,
+        }))
+      : defaultFiveSteps;
+
   return {
     callMode: {
       focusDimension,
@@ -56,29 +104,13 @@ function buildFallback(
           ? "家长倦怠偏高，解读时要先共情再讲方法。"
           : "家长还有行动意愿，适合从具体问题和未来画面入手。",
       summary: `当前这位家长更适合从“${focusDimension}”切入，围绕“${problemText}”先建立代入感，再衔接 ${report.courseRecommendations[0]?.module ?? "对应课程模块"}。`,
+      headline: undefined,
+      extendedBrief: [report.matchAnalysis, report.suggestions?.length ? `建议关注：${report.suggestions.slice(0, 3).join("；")}` : ""]
+        .filter(Boolean)
+        .join("\n\n"),
+      salesHooks: undefined,
     },
-    sopSteps: [
-      {
-        title: "1. 开场建立权威",
-        content: `先说明今天是一起看报告，不做评判，重点是帮家长看清“${problemText}”背后的真正卡点和下一步方法。`,
-      },
-      {
-        title: "2. 代入感确认",
-        content: `先围绕“${focusDimension}”询问家长最有感受的场景，让对方先说，优先让家长自己描述“${problemText}”最困扰的瞬间。`,
-      },
-      {
-        title: "3. 解读优势与卡点",
-        content: `先给家长看到孩子已有优势，再自然进入“${focusDimension}”为什么会持续拖住“${problemText}”的现实卡点和长期风险。`,
-      },
-      {
-        title: "4. 连接课程模块",
-        content: courseTalk,
-      },
-      {
-        title: "5. 推进下一动作",
-        content: `根据家长当前意愿，推进 1V1 深聊、直播、试听或后续跟进，但始终围绕“${problemText}”如何被解决来收口。`,
-      },
-    ],
+    sopSteps,
     dimensionInterpretations: report.dimensionScores.map((dimension) =>
       buildDimensionInterpretation(dimension),
     ),
@@ -163,8 +195,68 @@ function buildDimensionInterpretation(dimension: DimensionScore) {
   };
 }
 
+/** 拼接检索正文：不再把「整卷问卷」类文档标题刷在每一段前，避免界面像问卷 dump */
 function summarizeKnowledgeItems(items: RetrievedKnowledge[]) {
-  return items.map((item) => `${item.title}：${item.content}`).join("\n");
+  return items
+    .map((item) => sanitizeKnowledgeChunkBody(item.content).trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/** 模型或底稿若仍夹带链接/题干痕迹，展示前最后一道清洗 */
+function sanitizeWorkspaceAiOutputForDisplay(output: WorkspaceAiOutput): WorkspaceAiOutput {
+  return {
+    ...output,
+    callMode: {
+      ...output.callMode,
+      headline: output.callMode.headline
+        ? sanitizeKnowledgeChunkBody(output.callMode.headline).slice(0, 120)
+        : undefined,
+      summary: sanitizeKnowledgeChunkBody(output.callMode.summary),
+      extendedBrief: output.callMode.extendedBrief
+        ? sanitizeKnowledgeChunkBody(output.callMode.extendedBrief)
+        : undefined,
+      riskSignal: sanitizeKnowledgeChunkBody(output.callMode.riskSignal),
+      focusDimension: sanitizeKnowledgeChunkBody(output.callMode.focusDimension),
+      salesHooks: output.callMode.salesHooks?.map((h) => sanitizeKnowledgeChunkBody(h).slice(0, 200)),
+    },
+    dimensionInterpretations: output.dimensionInterpretations.map((d) => ({
+      ...d,
+      childInterpretation: sanitizeKnowledgeChunkBody(d.childInterpretation),
+      parentInterpretation: sanitizeKnowledgeChunkBody(d.parentInterpretation),
+      gapInterpretation: sanitizeKnowledgeChunkBody(d.gapInterpretation),
+    })),
+    sopSteps: output.sopSteps?.map((s) => ({
+      ...s,
+      content: sanitizeKnowledgeChunkBody(s.content),
+    })),
+    courseRecommendations: output.courseRecommendations?.map((c) => ({
+      ...c,
+      reason: sanitizeKnowledgeChunkBody(c.reason),
+      talkingPoint: sanitizeKnowledgeChunkBody(c.talkingPoint),
+    })),
+  };
+}
+
+function alignSopStepsToBlueprint(
+  blueprint: InterpretationSopStep[],
+  output: WorkspaceAiOutput,
+): WorkspaceAiOutput {
+  if (!blueprint.length) return output;
+  const padded = [...(output.sopSteps ?? [])];
+  while (padded.length < blueprint.length) {
+    padded.push({
+      title: blueprint[padded.length].title,
+      content: `请围绕「${blueprint[padded.length].title}」结合本客户测评与知识库该步要求现场口播。`,
+    });
+  }
+  return {
+    ...output,
+    sopSteps: blueprint.map((step, index) => ({
+      title: step.title,
+      content: padded[index]?.content?.trim() || `请围绕「${step.title}」结合本客户测评与知识库该步要求现场口播。`,
+    })),
+  };
 }
 
 export async function generateWorkspaceAiOutput(params: {
@@ -174,6 +266,8 @@ export async function generateWorkspaceAiOutput(params: {
   parentType: string;
   report: AssessmentReport;
   knowledge: WorkspaceKnowledge;
+  /** 来自知识库《测评解读SOP》解析后的步骤；若存在，sopSteps 条数与标题须与其一致 */
+  sopParsedSteps?: InterpretationSopStep[];
   sharedTemplates?: Array<{
     title: string;
     content: string;
@@ -183,12 +277,19 @@ export async function generateWorkspaceAiOutput(params: {
 }) {
   const weakest = [...params.report.dimensionScores].sort((a, b) => a.childPercent - b.childPercent)[0];
   const weakestDimension = weakest?.name ?? "";
-  const fallback = buildFallback(params.report, {
-    coreProblem: params.coreProblem,
-    parentType: params.parentType,
-    weakestDimension,
-    courseTalk: params.report.courseRecommendations[0]?.talkingPoint,
-  });
+  const fallback = buildFallback(
+    params.report,
+    {
+      coreProblem: params.coreProblem,
+      parentType: params.parentType,
+      weakestDimension,
+      courseTalk: params.report.courseRecommendations[0]?.talkingPoint,
+    },
+    params.sopParsedSteps,
+  );
+
+  const sopBlueprintText = summarizeKnowledgeItems(params.knowledge.interpretationDeskTemplate);
+  const sopN = params.sopParsedSteps?.length ?? 0;
 
   const userPrompt = JSON.stringify(
     {
@@ -204,6 +305,8 @@ export async function generateWorkspaceAiOutput(params: {
         courseRecommendations: params.report.courseRecommendations,
       },
       retrievedKnowledge: params.knowledge,
+      sopParsedSteps: params.sopParsedSteps ?? [],
+      assessmentInterpretationSopDocument: sopBlueprintText || "（知识库中未检索到标题包含「解读台模版」的文档）",
       sharedTemplates: params.sharedTemplates ?? [],
       styleGuide: {
         requiredTone: [
@@ -227,6 +330,9 @@ export async function generateWorkspaceAiOutput(params: {
           focusDimension: "string",
           riskSignal: "string",
           summary: "string",
+          headline: "string",
+          extendedBrief: "string",
+          salesHooks: ["string"],
         },
         sopSteps: [{ title: "string", content: "string" }],
         dimensionInterpretations: [
@@ -250,10 +356,30 @@ export async function generateWorkspaceAiOutput(params: {
     2,
   );
 
-  return generateDoubaoJson<WorkspaceAiOutput>({
-    system:
-      "你是田老师家庭教育体系下的销售解读助手。你的任务是根据测评结果、客户问题和检索到的课程/话术/禁用表达知识，输出适合销售一边通话一边使用的中文 JSON。要求专业、温和、确定，不要强销售，不要居高临下。SOP步骤必须符合：开场建立信任 -> 先确认代入感 -> 先优势后卡点 -> 连接课程模块 -> 推进下一动作。维度解读必须因维度而异，结合客户当前问题、家长类型、孩子表现和家长支持差值，写出更像真人顾问会说的话，避免模板腔。课程挂钩必须基于检索到的课程体系库与当前客户问题来说明“为什么先讲这个模块”，不能只重复模块名。",
+  const sopRules =
+    sopN > 0
+      ? `【解读台模版 · 流程对齐】user JSON 中 sopParsedSteps 为知识库《解读台模版》中「解读 7 步法」解析出的 ${sopN} 步（含每步 title 与原文 content）。sopSteps 必须恰好 ${sopN} 条；sopSteps[i].title 必须与 sopParsedSteps[i].title 完全一致（逐字）。sopSteps[i].content 为该步针对本客户的电话口播话术（约 80～240 字）：必须融合该步原文中的关键动作与要求、测评维度与家长问题，写成可直接照读的高转化表达；禁止大段复述 sopParsedSteps[i].content，禁止与原文步骤目标冲突。`
+      : `【测评解读库 · 解读台模版】assessmentInterpretationSopDocument 为《解读台模版》全文。若 sopParsedSteps 为空或文档未命中：sopSteps 必须恰好 5 条；顺序与阶段须尽量贴合文档，否则按「开场信任 → 代入感 → 优势卡点 → 课程 → 推进动作」默认五段，每条 content 为可直接口播话术（80～220 字）。`;
+
+  const raw = await generateDoubaoJson<WorkspaceAiOutput>({
+    system: `你是田老师家庭教育体系下的销售解读助手。根据测评结果、客户问题、检索到的知识库内容，输出适合销售一边通话一边使用的中文 JSON。
+
+工作台页面上的「家长类型长文案」与「六维分档解读」已由系统在测评解读库中单独匹配展示；本 JSON 侧重通话摘要与口播步骤。
+
+【测评 · 维度与图二占位】dimensionInterpretations 与 callMode.headline、callMode.extendedBrief 可与 report 简要一致即可（若无需可简短）；重点放在 focusDimension、riskSignal、summary 与 salesHooks。
+
+${sopRules}
+
+【通话模式】callMode.focusDimension、riskSignal、summary 结合测评；callMode.salesHooks 为 4～7 条极短话术要点。正文禁止网址、问卷题号、内部提示词。
+
+【其它】课程挂钩须引用课程体系库说明「为何先讲该模块」。遵守 styleGuide 中的禁用与话术风格。`,
     user: userPrompt,
-    fallback,
+    fallback: sanitizeWorkspaceAiOutputForDisplay(fallback),
+    temperature: 0.35,
   });
+
+  const polished = params.sopParsedSteps?.length
+    ? alignSopStepsToBlueprint(params.sopParsedSteps, raw)
+    : raw;
+  return sanitizeWorkspaceAiOutputForDisplay(polished);
 }

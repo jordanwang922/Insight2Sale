@@ -3,8 +3,21 @@ import { pathToFileURL } from "node:url";
 import { createCanvas } from "@napi-rs/canvas";
 import { createWorker } from "tesseract.js";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { WorkerMessageHandler } from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 type TextItem = { str?: string };
+
+let pdfWorkerMainThreadReady = false;
+
+function ensurePdfWorkerMainThread() {
+  if (pdfWorkerMainThreadReady) return;
+  pdfWorkerMainThreadReady = true;
+  // 与 pdf-parse 内嵌的 pdfjs 主版本一致（见 package.json pdfjs-dist），避免 API / Worker 版本号不一致。
+  // Node 下 fake worker 动态 import 在 Next 打包中易失败；主线程预挂 WorkerMessageHandler。
+  (globalThis as unknown as { pdfjsWorker?: { WorkerMessageHandler: unknown } }).pdfjsWorker = {
+    WorkerMessageHandler,
+  };
+}
 
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -58,6 +71,7 @@ export async function extractPdfOcrText(buffer: Buffer): Promise<string> {
   const ocrMode = (process.env.PDF_OCR_MODE ?? "hybrid").toLowerCase();
   const forceFullOcr = ocrMode === "full";
 
+  ensurePdfWorkerMainThread();
   ensurePdfWorker();
 
   const loadingTask = getDocument({ data: new Uint8Array(buffer) });

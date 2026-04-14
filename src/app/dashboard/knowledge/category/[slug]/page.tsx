@@ -4,11 +4,17 @@ import { categoryDescriptions } from "@/features/knowledge/categories";
 import { KNOWLEDGE_LIST_ACTION_TEXT_STYLE } from "@/features/knowledge/list-action-button-classes";
 import { knowledgeSourceTypeLabel } from "@/features/knowledge/source-type-label";
 import { getKnowledgeCategoryPageData, requireManagerSession } from "@/features/crm/queries";
-import { ingestKnowledgeDocument } from "@/server/actions/knowledge";
 import { cn, parseJson } from "@/lib/utils";
 import { DeleteKnowledgeButton } from "@/components/knowledge/delete-knowledge-button";
+import { KnowledgeIngestForm } from "@/components/knowledge/knowledge-ingest-form";
 
-export default async function KnowledgeCategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function KnowledgeCategoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ error?: string; uploaded?: string }>;
+}) {
   const session = await requireManagerSession();
   if (!session) {
     notFound();
@@ -18,6 +24,16 @@ export default async function KnowledgeCategoryPage({ params }: { params: Promis
   const data = await getKnowledgeCategoryPageData(slug);
   if (!data) {
     notFound();
+  }
+
+  const query = searchParams ? await searchParams : undefined;
+  let uploadError: string | undefined;
+  if (query?.error?.trim()) {
+    try {
+      uploadError = decodeURIComponent(query.error);
+    } catch {
+      uploadError = query.error;
+    }
   }
 
   const { category, documents, templates } = data;
@@ -39,8 +55,25 @@ export default async function KnowledgeCategoryPage({ params }: { params: Promis
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">在本模块新增知识</p>
-        <p className="mt-2 text-sm text-slate-500">支持 PDF、Word 上传或直接粘贴正文；保存后会自动切片并向量化。</p>
-        <form action={ingestKnowledgeDocument} className="mt-5 space-y-3">
+        <p className="mt-2 text-sm text-slate-500">
+          支持 PDF、Word、Excel（.xlsx / .xls）上传或直接粘贴正文；保存后会自动切片并向量化。
+        </p>
+        {uploadError ? (
+          <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{uploadError}</p>
+        ) : null}
+        {query?.uploaded === "1" ? (
+          <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            上传并向量化已完成。
+          </p>
+        ) : null}
+        <KnowledgeIngestForm
+          action="/api/knowledge/ingest"
+          method="POST"
+          encType="multipart/form-data"
+          className="mt-5 space-y-3"
+        >
+          <input type="hidden" name="redirectSuccess" value={`/dashboard/knowledge/category/${slug}`} />
+          <input type="hidden" name="redirectError" value={`/dashboard/knowledge/category/${slug}`} />
           <input type="hidden" name="category" value={category} />
           <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="title" placeholder="知识标题" required />
           <select className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="assessmentTemplateId" defaultValue="">
@@ -61,11 +94,16 @@ export default async function KnowledgeCategoryPage({ params }: { params: Promis
             name="content"
             placeholder="可直接粘贴正文；若只上传文件可留空。"
           />
-          <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="file" type="file" accept=".pdf,.docx,.txt,.md" />
+          <input
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+            name="file"
+            type="file"
+            accept=".pdf,.docx,.xlsx,.xls,.txt,.md"
+          />
           <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white" type="submit">
             上传并向量化
           </button>
-        </form>
+        </KnowledgeIngestForm>
       </section>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
@@ -118,7 +156,9 @@ export default async function KnowledgeCategoryPage({ params }: { params: Promis
                         ))}
                       </div>
                     ) : null}
-                    <p className="mt-3 line-clamp-2 text-sm leading-7 text-slate-600">{doc.summary ?? doc.rawText.slice(0, 200)}</p>
+                    <p className="mt-3 line-clamp-2 text-sm leading-7 text-slate-600">
+                      {doc.summary?.trim() ? doc.summary : "暂无摘要"}
+                    </p>
                   </div>
                   <div className="flex w-full min-w-[7rem] shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:min-w-[7rem]">
                     <Link

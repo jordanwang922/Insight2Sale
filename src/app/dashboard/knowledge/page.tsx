@@ -3,13 +3,14 @@ import { redirect } from "next/navigation";
 import { categoryDescriptions, knowledgeCategories } from "@/features/knowledge/categories";
 import { slugFromCategory } from "@/features/knowledge/category-slugs";
 import { getKnowledgeOverview, requireManagerSession } from "@/features/crm/queries";
-import { ingestKnowledgeDocument, updateKnowledgeDocumentState } from "@/server/actions/knowledge";
+import { updateKnowledgeDocumentState } from "@/server/actions/knowledge";
+import { KnowledgeIngestForm } from "@/components/knowledge/knowledge-ingest-form";
 import { parseJson } from "@/lib/utils";
 
 export default async function KnowledgePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string; category?: string }>;
+  searchParams?: Promise<{ q?: string; category?: string; error?: string; uploaded?: string }>;
 }) {
   const session = await requireManagerSession();
   if (!session) {
@@ -19,6 +20,15 @@ export default async function KnowledgePage({
   const resolved = searchParams ? await searchParams : undefined;
   const data = await getKnowledgeOverview(resolved);
   if (!data) return null;
+
+  let uploadError: string | undefined;
+  if (resolved?.error?.trim()) {
+    try {
+      uploadError = decodeURIComponent(resolved.error);
+    } catch {
+      uploadError = resolved.error;
+    }
+  }
 
   const countMap = new Map(data.categoryCounts.map((item) => [item.category, item._count._all]));
 
@@ -61,7 +71,22 @@ export default async function KnowledgePage({
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">新增知识</p>
-          <form action={ingestKnowledgeDocument} className="mt-5 space-y-3">
+          {uploadError ? (
+            <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{uploadError}</p>
+          ) : null}
+          {resolved?.uploaded === "1" ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              上传并向量化已完成。
+            </p>
+          ) : null}
+          <KnowledgeIngestForm
+            action="/api/knowledge/ingest"
+            method="POST"
+            encType="multipart/form-data"
+            className="mt-5 space-y-3"
+          >
+            <input type="hidden" name="redirectSuccess" value="/dashboard/knowledge" />
+            <input type="hidden" name="redirectError" value="/dashboard/knowledge" />
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="title" placeholder="知识标题，例如：模块五科学激励核心讲法" />
             <select className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="category" defaultValue={knowledgeCategories[0]}>
               {knowledgeCategories.map((category) => (
@@ -79,14 +104,23 @@ export default async function KnowledgePage({
               ))}
             </select>
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="tags" placeholder="标签，多个标签用逗号分隔，例如：自律,模块五,直播转化" />
-            <textarea className="min-h-40 w-full rounded-2xl border border-slate-200 px-4 py-3" name="content" placeholder="可以直接粘贴 PDF、Word 提炼后的正文，也可以只上传文件。" />
-            <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <textarea
+              className="min-h-40 w-full rounded-2xl border border-slate-200 px-4 py-3"
+              name="content"
+              placeholder="可以直接粘贴 PDF、Word、Excel 提炼后的正文，也可以只上传文件。"
+            />
+            <input
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+              name="file"
+              type="file"
+              accept=".pdf,.docx,.xlsx,.xls,.txt,.md"
+            />
             <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white" type="submit">
               上传并向量化
             </button>
-          </form>
+          </KnowledgeIngestForm>
           <p className="mt-4 text-xs leading-6 text-slate-400">
-            当前默认向量模型：local-hash-v1。已支持 PDF / Word / 文本三种输入形态。
+            当前默认向量模型：local-hash-v1。已支持 PDF / Word / Excel（.xlsx、.xls）/ 文本输入；Excel 按工作表导出为 CSV 行再切块向量化。
           </p>
         </article>
 
@@ -140,7 +174,7 @@ export default async function KnowledgePage({
                           </span>
                         </div>
                         <p className="mt-3 text-sm leading-7 text-slate-600">
-                          {document.summary || document.rawText.slice(0, 200)}
+                          {document.summary?.trim() ? document.summary : "暂无摘要"}
                         </p>
                         {document.assessmentTemplate ? (
                           <p className="mt-3 text-xs text-amber-700">

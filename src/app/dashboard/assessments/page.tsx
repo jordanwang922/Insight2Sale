@@ -38,7 +38,12 @@ export default async function AssessmentsPage() {
               name="sourceText"
               placeholder="可直接粘贴测评文档原文、评分说明或报告结构；如果留空，也可以只上传文件。"
             />
-            <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <input
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+              name="file"
+              type="file"
+              accept=".pdf,.docx,.xlsx,.xls,.txt,.md"
+            />
             <label className="inline-flex items-center gap-2 text-sm text-slate-600">
               <input name="isPrimary" type="checkbox" />
               标记为主推测评
