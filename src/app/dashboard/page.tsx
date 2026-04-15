@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { getDashboardSummary } from "@/features/crm/queries";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 
 export default async function DashboardPage() {
   const data = await getDashboardSummary();
 
   if (!data) return null;
+  const siteUrl = await getPublicSiteUrl();
   const assessmentHref = data.primaryAssessment
     ? `/assessment/${data.primaryAssessment.slug}`
     : "/assessment";
+  const assessmentAbsoluteUrl = siteUrl ? `${siteUrl}${assessmentHref}` : "";
   const assessmentLabel = data.primaryAssessment?.shortName ?? "智慧父母养育测评";
 
   return (
@@ -129,6 +132,7 @@ export default async function DashboardPage() {
             role={data.session.user.role}
             assessmentHref={assessmentHref}
             assessmentLabel={assessmentLabel}
+            assessmentAbsoluteUrl={assessmentAbsoluteUrl}
           />
         </div>
       </section>

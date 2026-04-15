@@ -173,8 +173,8 @@ export function CustomerCallRecordingBar({
           录制中 {seconds}s · {customerLabel}
         </p>
       ) : (
-        <p className="max-w-[14rem] text-right text-[0.65rem] text-slate-500">
-          外放通话收录双方声音；停止后由豆包语音转写 + 方舟豆包生成纪要（见环境变量说明）。
+        <p className="whitespace-nowrap text-right text-[0.65rem] text-slate-500">
+          外放通话收录双方声音；停止后由豆包语音转写。
         </p>
       )}
       {error ? <p className="max-w-[14rem] text-right text-[0.65rem] text-rose-600">{error}</p> : null}

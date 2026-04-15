@@ -88,33 +88,50 @@ export async function getDashboardSummary() {
         })
       : Promise.resolve([]),
   ]);
-  const futureAppointments = await prisma.appointment.findMany({
-    where: {
-      startAt: { gte: now },
-      OR: [
-        { customerId: { in: customers.map((customer) => customer.id) } },
-        { participantName: { in: customers.map((customer) => customer.wechatNickname) } },
-      ],
-    },
-    include: { customer: true, owner: true },
-    orderBy: { startAt: "asc" },
-  });
+  const customerIds = customers.map((c) => c.id);
+  const nicknames = customers.map((c) => c.wechatNickname);
+
+  /** 客户列表「下次预约」：优先未开始的最早一条；若均已过期则显示最近一次已排期（避免误以为未预约） */
+  const appointmentsForCustomerList =
+    customerIds.length === 0
+      ? []
+      : await prisma.appointment.findMany({
+          where: {
+            OR: [{ customerId: { in: customerIds } }, { participantName: { in: nicknames } }],
+          },
+          include: { customer: true, owner: true },
+          orderBy: { startAt: "asc" },
+        });
+
   const appointmentOwnerIds = Array.from(new Set(appointments.map((item) => item.ownerId)));
   const ownerColorMap = new Map(
     appointmentOwnerIds.map((ownerId, index) => [ownerId, getOwnerColor(index)]),
   );
 
-  const nextAppointmentByCustomer = new Map<string, (typeof futureAppointments)[number]>();
-  for (const appointment of futureAppointments) {
+  const appointmentsByCustomerId = new Map<string, typeof appointmentsForCustomerList>();
+  for (const appointment of appointmentsForCustomerList) {
     const matchedCustomerId =
       appointment.customerId ??
       customers.find((customer) => customer.wechatNickname === appointment.participantName)?.id;
 
-    if (!matchedCustomerId || nextAppointmentByCustomer.has(matchedCustomerId)) {
-      continue;
-    }
+    if (!matchedCustomerId) continue;
 
-    nextAppointmentByCustomer.set(matchedCustomerId, appointment);
+    const bucket = appointmentsByCustomerId.get(matchedCustomerId) ?? [];
+    bucket.push(appointment);
+    appointmentsByCustomerId.set(matchedCustomerId, bucket);
+  }
+
+  const nextAppointmentByCustomer = new Map<string, (typeof appointmentsForCustomerList)[number]>();
+  for (const customer of customers) {
+    const list = appointmentsByCustomerId.get(customer.id);
+    if (!list?.length) continue;
+
+    const upcoming = list.find((a) => a.startAt >= now);
+    if (upcoming) {
+      nextAppointmentByCustomer.set(customer.id, upcoming);
+    } else {
+      nextAppointmentByCustomer.set(customer.id, list[list.length - 1]);
+    }
   }
 
   const statusCounts = statuses.map((status) => ({

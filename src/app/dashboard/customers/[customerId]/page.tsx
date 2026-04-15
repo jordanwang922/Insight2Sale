@@ -21,6 +21,7 @@ import {
 } from "@/features/sales/interpretation-desk-live-data";
 import { buildInterpretationDeskMarkdownForDisplay } from "@/features/sales/interpretation-desk-template";
 import { parseJson } from "@/lib/utils";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 function formatMaybeList(value?: string | null) {
   if (!value) return "未填写";
@@ -91,6 +92,8 @@ export default async function CustomerWorkspacePage({
     data.customer.assessments[0]?.template?.slug != null
       ? `/assessment/${data.customer.assessments[0].template.slug}`
       : "/assessment";
+  const siteUrl = await getPublicSiteUrl();
+  const assessmentAbsoluteUrl = siteUrl ? `${siteUrl}${assessmentHref}` : "";
 
   const customerFacts = [
     ["微信昵称", data.customer.wechatNickname],
@@ -232,6 +235,7 @@ export default async function CustomerWorkspacePage({
             <SopDocRichText
               interpretationDesk
               assessmentHref={assessmentHref}
+              assessmentAbsoluteUrl={assessmentAbsoluteUrl}
               pieces={interpretationDeskPieces}
             />
           </div>

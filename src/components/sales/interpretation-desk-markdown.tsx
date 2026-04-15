@@ -72,14 +72,22 @@ function renderBracketsAndBold(s: string): ReactNode {
   });
 }
 
-function renderDeskInlineParagraph(block: string, assessmentHref?: string | null): ReactNode {
+function renderDeskInlineParagraph(
+  block: string,
+  assessmentHref?: string | null,
+  assessmentAbsoluteUrl?: string | null,
+): ReactNode {
   const parts = block.split(INTERPRETATION_DESK_COPY_MARK);
   const out: ReactNode[] = [];
   parts.forEach((part, i) => {
     if (i > 0) {
       out.push(
         assessmentHref ? (
-          <InterpretationDeskCopyAssessmentButton key={`copy-${i}`} assessmentPath={assessmentHref} />
+          <InterpretationDeskCopyAssessmentButton
+            key={`copy-${i}`}
+            assessmentPath={assessmentHref}
+            assessmentAbsoluteUrl={assessmentAbsoluteUrl}
+          />
         ) : (
           <span key={`copy-${i}`} className="rounded-md bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800">
             ［测评链接未配置］
@@ -95,13 +103,16 @@ function renderDeskInlineParagraph(block: string, assessmentHref?: string | null
 /**
  * 解读台模版专用：大节/小节/要点行加粗与字号，正文保持 pre-wrap。
  * @param assessmentHref 主推测评路径，供「复制智慧父母养育测评」按钮使用
+ * @param assessmentAbsoluteUrl 完整测评 URL（服务端传入），避免块级控件在非法嵌套修复后仍缺链接
  */
 export function InterpretationDeskMarkdownBlocks({
   text,
   assessmentHref,
+  assessmentAbsoluteUrl,
 }: {
   text: string;
   assessmentHref?: string | null;
+  assessmentAbsoluteUrl?: string | null;
 }) {
   const normalized = text.replace(/\r\n/g, "\n");
   const lines = normalized.split("\n");
@@ -116,12 +127,13 @@ export function InterpretationDeskMarkdownBlocks({
     bodyBuf = [];
     if (!block.trim()) return;
     nodes.push(
-      <p
+      <div
         key={`body-${blockIndex++}`}
+        role="paragraph"
         className="whitespace-pre-wrap text-sm leading-7 text-slate-700"
       >
-        {renderDeskInlineParagraph(block, assessmentHref)}
-      </p>,
+        {renderDeskInlineParagraph(block, assessmentHref, assessmentAbsoluteUrl)}
+      </div>,
     );
   };
 

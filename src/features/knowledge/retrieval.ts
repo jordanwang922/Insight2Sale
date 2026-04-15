@@ -5,7 +5,8 @@ import {
   chunkInterpretationNoiseScore,
   sanitizeKnowledgeChunkBody,
 } from "@/features/knowledge/chunk-sanitize";
-import { embedText, rankKnowledgeChunks } from "@/features/knowledge/rag";
+import { embedQueryForKnowledge, getActiveEmbeddingModelLabel } from "@/lib/ai/ark-embedding";
+import { rankKnowledgeChunks } from "@/features/knowledge/rag";
 
 export interface RetrievedKnowledge {
   id: string;
@@ -22,9 +23,11 @@ export async function retrieveKnowledge(params: {
   limit?: number;
   assessmentTemplateId?: string;
 }) {
-  const queryEmbedding = embedText(params.query);
+  const modelLabel = getActiveEmbeddingModelLabel();
+  const queryEmbedding = await embedQueryForKnowledge(params.query);
   const chunks = await prisma.knowledgeChunk.findMany({
     where: {
+      embeddingModel: modelLabel,
       document: {
         enabled: true,
         ...(params.assessmentTemplateId

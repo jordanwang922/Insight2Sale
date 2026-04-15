@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireManagerAction } from "@/server/action-auth";
 import { buildKnowledgeChunks, extractKnowledgeText, persistKnowledgeFile, summarizeKnowledge } from "@/features/knowledge/ingestion";
+import { getActiveEmbeddingModelLabel } from "@/lib/ai/ark-embedding";
 import { knowledgeCategories } from "@/features/knowledge/categories";
 import { revalidateKnowledgePaths, ingestKnowledgeFromFormData } from "@/features/knowledge/ingest-document";
 
@@ -117,7 +118,7 @@ export async function updateKnowledgeDocument(formData: FormData) {
   }
 
   const summary = summarizeKnowledge(rawText);
-  const chunks = buildKnowledgeChunks(rawText);
+  const chunks = await buildKnowledgeChunks(rawText);
 
   await prisma.$transaction(async (tx) => {
     await tx.knowledgeChunk.deleteMany({ where: { documentId: id } });
@@ -135,7 +136,7 @@ export async function updateKnowledgeDocument(formData: FormData) {
         tagsJson: JSON.stringify(tags),
         metadataJson: JSON.stringify({
           chunkCount: chunks.length,
-          embeddingModel: "local-hash-v1",
+          embeddingModel: getActiveEmbeddingModelLabel(),
         }),
         enabled,
       },

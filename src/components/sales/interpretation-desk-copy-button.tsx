@@ -1,67 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 解读台 SOP 内联：复制主推测评链接（与工作台「复制智慧父母养育测评」同款样式）。
- */
+/** 解读台正文内嵌：仅展示可长按复制的测评链接（不依赖一键复制按钮） */
 export function InterpretationDeskCopyAssessmentButton({
   assessmentPath,
+  assessmentAbsoluteUrl,
 }: {
-  /** 如 `/assessment/xxx`，会拼成绝对 URL 再复制 */
   assessmentPath: string;
+  assessmentAbsoluteUrl?: string | null;
 }) {
-  const [toast, setToast] = useState("");
+  const path = assessmentPath.startsWith("/") ? assessmentPath : `/${assessmentPath}`;
 
-  async function handleClick() {
-    const link = `${window.location.origin}${assessmentPath.startsWith("/") ? assessmentPath : `/${assessmentPath}`}`;
-    const ok = await copyToClipboard(link);
-    setToast(ok ? "复制成功。请转发给家长" : `无法自动复制，请手动复制：${link}`);
-    window.setTimeout(() => setToast(""), ok ? 3200 : 8000);
-  }
+  const displayUrl = useMemo(() => {
+    if (assessmentAbsoluteUrl?.trim()) return assessmentAbsoluteUrl.trim();
+    if (typeof window !== "undefined") return `${window.location.origin}${path}`;
+    return "";
+  }, [assessmentAbsoluteUrl, path]);
+
+  if (!displayUrl) return null;
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={handleClick}
-        className="mx-0.5 inline-flex max-w-full align-baseline rounded-2xl bg-slate-950 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800 sm:text-sm"
-      >
-        复制智慧父母养育测评
-      </button>
-      {toast ? (
-        <div
-          role="status"
-          className="fixed bottom-20 left-4 right-4 z-[60] rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-800 shadow-lg md:bottom-8 md:left-auto md:right-8 md:max-w-sm"
-        >
-          {toast}
-        </div>
-      ) : null}
-    </>
+    <span className="inline-flex max-w-full flex-col gap-1.5 align-baseline">
+      <span className="text-[10px] leading-snug text-slate-500">测评链接（长按复制）</span>
+      <textarea
+        readOnly
+        value={displayUrl}
+        className="box-border max-h-24 min-h-[3.25rem] w-full min-w-[12rem] max-w-full resize-y rounded border border-slate-200 bg-slate-50 p-2 font-mono text-[11px] leading-snug text-slate-900 sm:min-w-[18rem]"
+        aria-label="测评链接"
+      />
+    </span>
   );
 }

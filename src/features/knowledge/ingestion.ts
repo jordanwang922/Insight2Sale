@@ -1,5 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  embedTextsWithArk,
+  getActiveEmbeddingModelLabel,
+  isArkSemanticEmbeddingConfigured,
+  truncateForEmbedding,
+} from "@/lib/ai/ark-embedding";
 import { embedText, chunkKnowledgeText } from "@/features/knowledge/rag";
 
 /** pdf-parse / mammoth / pdf-ocr（含 pdfjs、tesseract、canvas）体积与运行时内存都大，勿顶层静态 import，避免 dev 首次编译与常驻进程拖垮内存 */
@@ -92,12 +98,30 @@ export function summarizeKnowledge(rawText: string) {
   return normalized.slice(0, 220);
 }
 
-export function buildKnowledgeChunks(rawText: string) {
-  return chunkKnowledgeText(rawText).map((chunk) => ({
+export async function buildKnowledgeChunks(rawText: string) {
+  const seeds = chunkKnowledgeText(rawText);
+  const modelLabel = getActiveEmbeddingModelLabel();
+
+  if (isArkSemanticEmbeddingConfigured()) {
+    const contents = seeds.map((c) => truncateForEmbedding(c.content));
+    const embeddings = await embedTextsWithArk(contents);
+    if (embeddings.length !== seeds.length) {
+      throw new Error("向量条数与切片数量不一致，请重试或检查方舟 embedding 接口。");
+    }
+    return seeds.map((chunk, i) => ({
+      chunkIndex: chunk.index,
+      content: chunk.content,
+      embeddingJson: JSON.stringify(embeddings[i]),
+      embeddingModel: modelLabel,
+      tokensJson: JSON.stringify([]),
+    }));
+  }
+
+  return seeds.map((chunk) => ({
     chunkIndex: chunk.index,
     content: chunk.content,
     embeddingJson: JSON.stringify(embedText(chunk.content)),
-    embeddingModel: "local-hash-v1",
+    embeddingModel: modelLabel,
     tokensJson: JSON.stringify([]),
   }));
 }

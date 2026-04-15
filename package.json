@@ -1,6 +1,6 @@
 {
   "name": "insight2sale",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "postinstall": "prisma generate",
@@ -16,7 +16,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "node --import tsx prisma/seed.ts"
+    "db:seed": "node --import tsx prisma/seed.ts",
+    "db:reembed-knowledge": "node --import tsx --env-file=.env scripts/reembed-knowledge-embeddings.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -35,7 +36,6 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.62.0",
-    "recharts": "^3.2.1",
     "tailwind-merge": "^3.3.1",
     "tesseract.js": "6.0.1",
     "xlsx": "^0.18.5",

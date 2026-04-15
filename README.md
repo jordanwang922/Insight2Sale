@@ -1,4 +1,4 @@
-# Insight2Sale v0.8.0
+# Insight2Sale v1.0.0
 
 智慧父母养育测评与销售转化 CRM。
 
@@ -6,17 +6,10 @@
 
 ## 当前版本范围
 
-- **v0.8.0**：**网页端通话录音**（解读台宽屏）→ 豆包语音 **妙记式转写**（分句 + 时间轴）+ 方舟 **纪要/要点**；**通话管理**列表与详情、侧边栏入口；`prisma generate` 纳入 install/build；开发默认端口 **3001**；设计文档 §11.5 / §27、开发日志与交接日志已更新
-- **v0.7.0**：工作台「家长类型解读」与「通话模式」对齐知识库 Excel 矩阵（按当前养育类型列精确抽取，不混 9 型）；通话简报由矩阵「隐性风险 / 关键提醒」行 + 测评最弱维 + 倦怠/核心难题短句构成，关键词加粗展示；开发日志归档续写
-- **v0.6.0**：销售后台手机端体验专项（顶栏与快捷入口、客户列表卡片化、团队日历横向滑动、复制测评链接降级与提示、知识库召回标题换行）；PC 端布局保持 `md:` 及以上断点不变
-- 家长端 H5 测评
-- 45 题测评题库、自动评分、9 类家长类型判断
-- 孩子/家长双雷达图与 6 维度解读
-- 销售工作台、客户解读台、跟进记录、预约日历
-- 主管端客户分配、团队日历、状态字典、模板审核
-- 测评表管理与“主推测评”
-- 6 类知识库管理与基础 RAG 召回
-- 豆包 AI 驱动的 SOP 解读、课程挂钩、维度解读
+- **v1.0.0（首版）**：**新销售默认密码**（`demo12345`，见 `src/config/default-credentials.ts`）+ **首次登录强制改密**（未改密不可进工作台；改密后自动进入工作台）；主管创建销售时**固定醒目提示**默认密码；**快捷入口**分端（桌面：打开 + 复制链接；手机：仅可长按复制的链接框）；测评链接根地址 **`getPublicSiteUrl()`** 随部署域名变化；移除调试用「前端包」角标；设计文档 / 开发日志 / 交接日志已对齐
+- **v0.8.0**：网页端通话录音 → 豆包语音妙记式转写 + 方舟纪要；通话管理列表与详情；`prisma generate` 纳入 install/build；开发默认端口 **3001**
+- **v0.7.0**：家长类型解读与通话模式对齐知识库 Excel 矩阵
+- 家长端 H5 测评、45 题题库、双雷达图、销售工作台、主管视图、知识库与 RAG、豆包 AI 解读等（详见 `docs/design/system-design.md`）
 
 ## 技术栈
 
@@ -38,16 +31,14 @@
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/insight2sale?schema=public"
 AUTH_SECRET="replace-with-a-long-random-secret"
 AUTH_URL="http://localhost:3001"
+NEXTAUTH_URL="http://localhost:3001"
 ARK_API_KEY="your-doubao-api-key"
 ARK_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
 ARK_MODEL="doubao-seed-1-6-251015"
 ARK_TIMEOUT_MS="8000"
-
-# 通话录音转写（火山豆包语音，与 ARK 密钥不同）
-# VOLC_SPEECH_APP_KEY="..."
-# VOLC_SPEECH_ACCESS_KEY="..."
-# VOLC_SPEECH_RESOURCE_ID="volc.bigasr.auc_turbo"
 ```
+
+知识库语义向量（生产建议配置）：`ARK_EMBEDDING_MODEL`（方舟 Embedding 接入点 ID，与 `ARK_MODEL` 不同）。
 
 ### 2. 启动 PostgreSQL
 
@@ -88,6 +79,8 @@ npm run start -- --port 3001
 - 销售：`zhoulan / demo12345`
 - 销售：`xuning / demo12345`
 
+首次登录若仍使用默认密码，系统会要求先修改密码后再进入工作台。
+
 ## 目录说明
 
 - 设计方案：`docs/design/system-design.md`
@@ -96,10 +89,9 @@ npm run start -- --port 3001
 
 ## 当前注意事项
 
-- 知识库 RAG 已接通，但向量模型目前仍是本地 `local-hash-v1`
-- 豆包 AI 已接入正式 `ark` 地址
-- 手机测试需要使用局域网地址，而不是 `localhost`
-- 如需正式上线，建议继续补浏览器级 E2E、对象存储、短信/微信通知和更高质量 embedding
+- 知识库 RAG 在生产应配置 **方舟 Embedding**（`ARK_EMBEDDING_MODEL`）；切换或补算向量见 `npm run db:reembed-knowledge`
+- 手机或局域网调试时，`AUTH_URL` / `NEXTAUTH_URL` 须与浏览器实际访问地址（含端口）一致
+- 正式上线前建议配置 HTTPS、持久化上传与录音目录、并复核环境变量
 
 ## 仓库定位
 

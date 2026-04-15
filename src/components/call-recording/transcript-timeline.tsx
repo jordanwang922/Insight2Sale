@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef } from "react";
 import type { TranscriptSegment } from "@/lib/ai/doubao-speech";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 function formatClock(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return "00:00";
@@ -37,11 +38,7 @@ export function TranscriptTimeline({
   const onCopy = useCallback(async () => {
     const t = fullText.trim();
     if (!t) return;
-    try {
-      await navigator.clipboard.writeText(t);
-    } catch {
-      /* ignore */
-    }
+    await copyTextToClipboard(t);
   }, [fullText]);
 
   return (

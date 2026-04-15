@@ -134,15 +134,18 @@ function SopTemplateFigureSingle({ img }: { img: Extract<SopRenderPiece, { kind:
  * 解读台模版：占位【】+ 插图（视口高度、横向滚动）。
  * @param interpretationDesk 为 true 时使用解读台专用标题层级与换行（与 PDF 大节/小节对齐）。
  * @param assessmentHref 主推测评路径（如 `/assessment/xxx`），供解读台内「复制智慧父母养育测评」使用。
+ * @param assessmentAbsoluteUrl 完整测评 URL（服务端拼好），供只读链接区 SSR
  */
 export function SopDocRichText({
   pieces,
   interpretationDesk = false,
   assessmentHref,
+  assessmentAbsoluteUrl,
 }: {
   pieces: SopRenderPiece[];
   interpretationDesk?: boolean;
   assessmentHref?: string | null;
+  assessmentAbsoluteUrl?: string | null;
 }) {
   const grouped = groupConsecutiveImages(pieces);
 
@@ -164,6 +167,7 @@ export function SopDocRichText({
               key={`t-${index}`}
               text={block.value}
               assessmentHref={assessmentHref}
+              assessmentAbsoluteUrl={assessmentAbsoluteUrl}
             />
           ) : (
             <SopMarkdownBlocks key={`t-${index}`} text={block.value} />

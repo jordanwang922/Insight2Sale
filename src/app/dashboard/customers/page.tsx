@@ -25,6 +25,8 @@ export default async function CustomersPage({
     return matchKeyword && matchStatus;
   });
 
+  const now = new Date();
+
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -121,15 +123,22 @@ export default async function CustomersPage({
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-slate-400">下次预约</p>
                       <p className="mt-1 text-slate-700">
-                        {customer.nextAppointment
-                          ? customer.nextAppointment.startAt.toLocaleString("zh-CN", {
+                        {customer.nextAppointment ? (
+                          <>
+                            {customer.nextAppointment.startAt.toLocaleString("zh-CN", {
                               year: "numeric",
                               month: "numeric",
                               day: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            })
-                          : "-"}
+                            })}
+                            {customer.nextAppointment.startAt < now ? (
+                              <span className="ml-1 text-xs text-amber-700">（已过期）</span>
+                            ) : null}
+                          </>
+                        ) : (
+                          "-"
+                        )}
                       </p>
                     </div>
                     <div>
@@ -217,9 +226,16 @@ export default async function CustomersPage({
                 <div className="truncate text-slate-600">{customer.coreProblem}</div>
                 <div className="text-slate-600">
                   <div className="whitespace-nowrap">
-                    {customer.nextAppointment
-                      ? customer.nextAppointment.startAt.toLocaleDateString("zh-CN")
-                      : "-"}
+                    {customer.nextAppointment ? (
+                      <>
+                        {customer.nextAppointment.startAt.toLocaleDateString("zh-CN")}
+                        {customer.nextAppointment.startAt < now ? (
+                          <span className="ml-1 text-xs text-amber-700">（已过期）</span>
+                        ) : null}
+                      </>
+                    ) : (
+                      "-"
+                    )}
                   </div>
                   <div className="whitespace-nowrap text-xs text-slate-500">
                     {customer.nextAppointment

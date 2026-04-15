@@ -10,6 +10,8 @@ import { buildSalesSummary, toRadarData } from "../src/features/assessment/repor
 import { scoreAssessment } from "../src/features/assessment/scoring";
 import { AssessmentAnswer } from "../src/features/assessment/types";
 import { buildKnowledgeChunks } from "../src/features/knowledge/ingestion";
+import { getActiveEmbeddingModelLabel } from "../src/lib/ai/ark-embedding";
+import { DEFAULT_SALES_PASSWORD } from "../src/config/default-credentials";
 
 const prisma = new PrismaClient();
 
@@ -82,7 +84,7 @@ function buildDemoAnswers(profile: {
 }
 
 async function main() {
-  const passwordHash = await bcrypt.hash("demo12345", 10);
+  const passwordHash = await bcrypt.hash(DEFAULT_SALES_PASSWORD, 10);
 
   const manager = await prisma.user.upsert({
     where: { email: "manager@insight2sale.local" },
@@ -300,7 +302,7 @@ async function main() {
     });
 
     if (!exists) {
-      const chunks = buildKnowledgeChunks(document.rawText);
+      const chunks = await buildKnowledgeChunks(document.rawText);
       await prisma.knowledgeDocument.create({
         data: {
           title: document.title,
@@ -311,7 +313,7 @@ async function main() {
           tagsJson: JSON.stringify(document.tags),
           metadataJson: JSON.stringify({
             chunkCount: chunks.length,
-            embeddingModel: "local-hash-v1",
+            embeddingModel: getActiveEmbeddingModelLabel(),
           }),
           assessmentTemplateId: primaryAssessment.id,
           createdById: manager.id,

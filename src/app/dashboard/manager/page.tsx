@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { DEFAULT_SALES_PASSWORD } from "@/config/default-credentials";
 import { getManagerOverview, requireManagerSession } from "@/features/crm/queries";
 import { createSalesUser } from "@/server/actions/users";
 
@@ -118,9 +119,17 @@ export default async function ManagerPage() {
           <form action={createSalesUser} className="mt-5 space-y-3">
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="name" placeholder="销售姓名" />
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="username" placeholder="登录用户名，例如：wangli / zhoulan" />
-            <p className="text-xs leading-6 text-slate-400">
-              新增销售默认密码为 `demo12345`。上线前再切英文名登录和首次强制改密。
-            </p>
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950">
+              <p className="font-semibold text-amber-900">重要：默认登录密码</p>
+              <p className="mt-2">
+                新销售账号的默认密码为{" "}
+                <code className="rounded-md bg-white px-2 py-0.5 font-mono font-semibold ring-1 ring-amber-200/80">
+                  {DEFAULT_SALES_PASSWORD}
+                </code>
+                。对方<strong>首次登录后必须先修改密码</strong>
+                ，否则无法进入工作台。请通过安全渠道当面或单独告知，勿在群内公开发送。
+              </p>
+            </div>
             <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
               创建销售账号
             </button>

@@ -23,6 +23,33 @@
 
 ## 当前记录
 
+### 2026-04-16 v1.0.0 发布（首版冻结）
+
+- 本次目标：发布 **v1.0.0**；账号与微信端体验收口；设计/开发/交接文档与 **README** 对齐；打 Git tag **`v1.0.0`** 并推送 **origin/main**。
+- 完成内容：
+  - **新销售默认密码**：`DEFAULT_SALES_PASSWORD`（`demo12345`）单点配置；`createSalesUser` / `seed` 共用；主管创建销售页**醒目提示**默认密码与安全告知。
+  - **首次登录强制改密**：`User.defaultPassword` ↔ JWT/Session `mustChangePassword`；`/dashboard` 布局拦截；`/login` 已登录且未改密直达 `/password?required=1`；`changePassword` 成功后清标记；已登录改密成功 **自动跳转工作台**（无需再点链接）。
+  - **微信 / 手机**：快捷入口分端——桌面「打开 + 复制」；手机仅链接框长按复制；测评完整 URL 服务端 `getPublicSiteUrl()` + 客户端兜底；解读台内嵌链接区 HTML 结构修正（避免块级控件非法嵌套于段落）。
+  - **产品清理**：移除调试用「前端包」角标与相关文件；雷达图等若干 UI 与知识库管线延续 v0.8。
+  - **文档**：`system-design.md` 账号条款更新；`development-log` / `handoff-log` / `README` 版本号与说明。
+- 影响文件（摘）：`src/config/default-credentials.ts`、`src/auth.ts`、`src/app/dashboard/layout.tsx`、`src/app/login/page.tsx`、`src/app/password/page.tsx`、`src/components/forms/change-password-form.tsx`、`src/server/actions/users.ts`、`src/components/dashboard/quick-actions.tsx`、`src/lib/public-site-url.ts`、`docs/design/system-design.md`、`docs/logs/*.md`、`README.md`、`package.json`
+- 验证情况：`npm test`、`npm run build` 通过（发布前已执行）。
+- 风险 / 注意事项：生产务必配置 **`AUTH_URL` / `NEXTAUTH_URL`** 与公网访问一致；可选 **`NEXT_PUBLIC_SITE_URL`** 仅在代理未传 Host 时使用。
+- 下一步建议：**部署文档**（环境与反代、数据库迁移、持久化 `storage/`、HTTPS）；生产监控方舟与豆包额度。
+
+### 2026-04-15 知识库：豆包语义向量（Embedding）
+
+- 本次目标：将知识库 RAG 从本地 `local-hash-v1` **切换为火山方舟豆包 Embedding**；检索与入库向量一致；支持 **Vision 接入点**（`/embeddings/multimodal`）；历史切片可全量重算。
+- 完成内容：
+  - **实现**：`src/lib/ai/ark-embedding.ts`（标准 `/embeddings` + 多模态 `/embeddings/multimodal`）；`buildKnowledgeChunks` 异步；`retrieveKnowledge` 按 `embeddingModel` 过滤；`ARK_EMBEDDING_MODEL`、`ARK_EMBEDDING_USE_MULTIMODAL`、`ARK_EMBEDDING_TIMEOUT_MS`。
+  - **脚本**：`npm run db:reembed-knowledge` → `scripts/reembed-knowledge-embeddings.ts`。
+  - **文档**：`docs/design/system-design.md` 新增 **§28**；修订 §23、§25；`.env.example` 注释。
+  - **实跑**：全量重算约 1774 条切片成功（多模态并发）；`npm test`、`npm run build` 通过。
+- 影响文件（摘）：`src/lib/ai/ark-embedding.ts`、`src/features/knowledge/ingestion.ts`、`retrieval.ts`、`ingest-document.ts`、`src/server/actions/knowledge.ts`、`prisma/seed.ts`、`package.json`、`scripts/reembed-knowledge-embeddings.ts`、`.env.example`、`docs/design/system-design.md`、`docs/logs/handoff-log.md`
+- 验证情况：`npm test`、`npm run build`；`db:reembed-knowledge` 对方舟成功（需有效 `ARK_*` 与接入点）。
+- 风险 / 注意事项：接入点 ID 须与控制台一致（曾出现日期笔误导致 404）；**Vision** 须 `ARK_EMBEDDING_USE_MULTIMODAL=1`；纯文本 Embedding 接入点可关多模态开关以提升批量性能。
+- 下一步建议：生产环境监控方舟 Embedding 额度与限流；可选改用 `Doubao-embedding` / `large` 文本接入点减轻多模态请求量。
+
 ### 2026-04-15 v0.8.0 发布
 
 - 本次目标：发布 **v0.8.0**；将 **网页端通话录音 + 豆包语音妙记式转写 + 方舟纪要** 纳入产品与文档基线；开发 / 交接日志更新；代码推送 **main**。
