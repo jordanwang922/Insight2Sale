@@ -6,7 +6,8 @@ services:
     environment:
       POSTGRES_DB: insight2sale
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      # 在仓库旁 .env 中设置 POSTGRES_PASSWORD（勿使用弱口令提交到 Git）
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5432:5432"
     volumes:

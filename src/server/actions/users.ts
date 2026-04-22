@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireAdminAction, requireManagerAction } from "@/server/action-auth";
-import { DEFAULT_NEW_USER_PASSWORD } from "@/config/default-credentials";
+import { getDefaultNewUserPassword } from "@/config/default-credentials";
 
 export async function createSalesUser(formData: FormData) {
   const session = await requireManagerAction();
@@ -18,7 +18,7 @@ export async function createSalesUser(formData: FormData) {
     throw new Error("请填写销售姓名和登录用户名。");
   }
 
-  const passwordHash = await bcrypt.hash(DEFAULT_NEW_USER_PASSWORD, 10);
+  const passwordHash = await bcrypt.hash(getDefaultNewUserPassword(), 10);
 
   await prisma.user.create({
     data: {
@@ -47,7 +47,7 @@ export async function createManagerUser(formData: FormData) {
     throw new Error("请填写主管姓名和登录用户名。");
   }
 
-  const passwordHash = await bcrypt.hash(DEFAULT_NEW_USER_PASSWORD, 10);
+  const passwordHash = await bcrypt.hash(getDefaultNewUserPassword(), 10);
 
   await prisma.user.create({
     data: {

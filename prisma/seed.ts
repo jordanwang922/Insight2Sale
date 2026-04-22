@@ -1,3 +1,6 @@
+import { loadDotenvFromRoot } from "../scripts/load-dotenv";
+loadDotenvFromRoot();
+
 import bcrypt from "bcryptjs";
 import { PrismaClient, UserRole } from "@prisma/client";
 import {
@@ -11,7 +14,7 @@ import { scoreAssessment } from "../src/features/assessment/scoring";
 import { AssessmentAnswer } from "../src/features/assessment/types";
 import { buildKnowledgeChunks } from "../src/features/knowledge/ingestion";
 import { getActiveEmbeddingModelLabel } from "../src/lib/ai/ark-embedding";
-import { DEFAULT_SALES_PASSWORD } from "../src/config/default-credentials";
+import { getDefaultNewUserPassword } from "../src/config/default-credentials";
 
 const prisma = new PrismaClient();
 
@@ -84,7 +87,7 @@ function buildDemoAnswers(profile: {
 }
 
 async function main() {
-  const passwordHash = await bcrypt.hash(DEFAULT_SALES_PASSWORD, 10);
+  const passwordHash = await bcrypt.hash(getDefaultNewUserPassword(), 10);
 
   const admin = await prisma.user.upsert({
     where: { username: "admin" },

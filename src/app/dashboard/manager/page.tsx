@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { DEFAULT_NEW_USER_PASSWORD } from "@/config/default-credentials";
+import { getDefaultNewUserPassword } from "@/config/default-credentials";
 import { getManagerOverview, requireManagerSession } from "@/features/crm/queries";
 import { createManagerUser, createSalesUser } from "@/server/actions/users";
 
@@ -18,6 +18,8 @@ export default async function ManagerPage() {
       </div>
     );
   }
+
+  const initialPasswordHint = getDefaultNewUserPassword();
 
   const isAdminView = data.view === "admin";
 
@@ -177,7 +179,7 @@ export default async function ManagerPage() {
                   <p className="mt-2">
                     新主管账号的默认密码为{" "}
                     <code className="rounded-md bg-white px-2 py-0.5 font-mono font-semibold ring-1 ring-amber-200/80">
-                      {DEFAULT_NEW_USER_PASSWORD}
+                      {initialPasswordHint}
                     </code>
                     。对方<strong>首次登录后必须先修改密码</strong>
                     ，否则无法进入工作台。请通过安全渠道当面或单独告知，勿在群内公开发送。
@@ -203,7 +205,7 @@ export default async function ManagerPage() {
                   <p className="mt-2">
                     新销售账号的默认密码为{" "}
                     <code className="rounded-md bg-white px-2 py-0.5 font-mono font-semibold ring-1 ring-amber-200/80">
-                      {DEFAULT_NEW_USER_PASSWORD}
+                      {initialPasswordHint}
                     </code>
                     。对方<strong>首次登录后必须先修改密码</strong>
                     ，否则无法进入工作台。请通过安全渠道当面或单独告知，勿在群内公开发送。

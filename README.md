@@ -6,7 +6,7 @@
 
 ## 当前版本范围
 
-- **v1.0.0（首版）**：**新销售默认密码**（`demo12345`，见 `src/config/default-credentials.ts`）+ **首次登录强制改密**（未改密不可进工作台；改密后自动进入工作台）；主管创建销售时**固定醒目提示**默认密码；**快捷入口**分端（桌面：打开 + 复制链接；手机：仅可长按复制的链接框）；测评链接根地址 **`getPublicSiteUrl()`** 随部署域名变化；移除调试用「前端包」角标；设计文档 / 开发日志 / 交接日志已对齐
+- **v1.0.0（首版）**：**新建销售/主管初始密码**由环境变量 **`DEFAULT_NEW_USER_PASSWORD`**（至少 8 位，勿提交到 Git）+ **`getDefaultNewUserPassword()`** 读取；**首次登录强制改密**（未改密不可进工作台；改密后自动进入工作台）；团队总览页**醒目提示**初始密码；**快捷入口**分端（桌面：打开 + 复制链接；手机：仅可长按复制的链接框）；测评链接根地址 **`getPublicSiteUrl()`** 随部署域名变化；移除调试用「前端包」角标；设计文档 / 开发日志 / 交接日志已对齐
 - **v0.8.0**：网页端通话录音 → 豆包语音妙记式转写 + 方舟纪要；通话管理列表与详情；`prisma generate` 纳入 install/build；开发默认端口 **3001**
 - **v0.7.0**：家长类型解读与通话模式对齐知识库 Excel 矩阵
 - 家长端 H5 测评、45 题题库、双雷达图、销售工作台、主管视图、知识库与 RAG、豆包 AI 解读等（详见 `docs/design/system-design.md`）
@@ -30,6 +30,10 @@
 ```bash
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/insight2sale?schema=public"
 AUTH_SECRET="replace-with-a-long-random-secret"
+# 与 seed / 创建销售 / 创建主管一致；至少 8 位，勿写入版本库
+DEFAULT_NEW_USER_PASSWORD="replace-with-min-8-chars"
+# 若使用 compose.yaml 起 Postgres，须与 compose 中变量一致
+POSTGRES_PASSWORD="replace-local-postgres-password"
 AUTH_URL="http://localhost:3001"
 NEXTAUTH_URL="http://localhost:3001"
 ARK_API_KEY="your-doubao-api-key"
@@ -73,13 +77,13 @@ npm run start -- --port 3001
 
 ## 默认账号
 
-种子数据会创建：
+种子数据会创建（登录名固定，**密码均为你在 `.env` 中配置的 `DEFAULT_NEW_USER_PASSWORD`**）：
 
-- 主管：`tianmanager / demo12345`
-- 销售：`zhoulan / demo12345`
-- 销售：`xuning / demo12345`
+- 管理员：`admin`
+- 主管：`tianmanager`
+- 销售：`zhoulan`、`xuning`
 
-首次登录若仍使用默认密码，系统会要求先修改密码后再进入工作台。
+首次登录若仍使用上述初始密码，系统会要求先修改密码后再进入工作台。
 
 ## 目录说明
 

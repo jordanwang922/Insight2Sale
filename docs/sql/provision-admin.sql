@@ -1,49 +1,16 @@
--- 在云端/生产库执行前请确认：
--- 1) 已应用含 UserRole.ADMIN 与 "User"."adminId" 的迁移（见 prisma/migrations/20260421103000_admin_role_admin_id/migration.sql）
--- 2) 按需替换下方 passwordHash：须为 bcrypt（与 Next 登录校验一致）。下面示例为密码 fscrm2026、cost=10 的一次生成结果；
---    若你重新 hash，请用 Node：require('bcryptjs').hash('fscrm2026', 10).then(console.log)
+-- ============================================================================
+-- 重要：请勿在仓库中存放含真实 bcrypt 或明文密码的 SQL（会触发 GitHub Secret 扫描）。
+-- ============================================================================
+--
+-- 云端/生产需要「创建 admin + 主管挂 adminId」时，请在**有 .env 的机器**上生成 SQL：
+--
+--   cd 项目根目录
+--   node --import tsx --env-file=.env scripts/generate-provision-admin-sql.ts > /tmp/provision-admin.sql
+--   psql "$DATABASE_URL" -f /tmp/provision-admin.sql
+--
+-- 其中 `.env` 须包含：DEFAULT_NEW_USER_PASSWORD=（至少 8 位，与线上一致）
+--
+-- 本地开发也可用 `npm run db:seed`（会写入演示数据，生产慎用）。
+-- ============================================================================
 
-BEGIN;
-
--- 若已存在 admin 用户则跳过插入（不覆盖已有密码）
-INSERT INTO "User" (
-  id,
-  name,
-  username,
-  email,
-  "passwordHash",
-  role,
-  "defaultPassword",
-  "managerId",
-  "adminId",
-  "createdAt",
-  "updatedAt"
-)
-SELECT
-  'cmprovisionadminroot',
-  '系统管理员',
-  'admin',
-  'admin@insight2sale.local',
-  '$2b$10$SR2GbpAsl2NqfkoIRQn6EOgcoVqBd4prXCvUP8kz/zn7vCKS.xlFe',
-  'ADMIN'::"UserRole",
-  true,
-  NULL,
-  NULL,
-  NOW(),
-  NOW()
-WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u.username = 'admin');
-
--- 未挂管理员的主管挂到 admin；并确保 tianmanager 指向该 admin
-UPDATE "User" m
-SET "adminId" = a.id,
-    "updatedAt" = NOW()
-FROM "User" a
-WHERE a.username = 'admin'
-  AND a.role = 'ADMIN'::"UserRole"
-  AND m.role = 'MANAGER'::"UserRole"
-  AND (m."adminId" IS NULL OR m.username = 'tianmanager');
-
-COMMIT;
-
--- 验证：
--- SELECT id, username, role, "adminId" FROM "User" WHERE username IN ('admin','tianmanager');
+SELECT 1 AS "请阅读本文件上方说明，勿直接执行本 SELECT";

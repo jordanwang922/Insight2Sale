@@ -23,16 +23,23 @@
 
 ## 当前记录
 
+### 2026-04-22 安全：移除仓库内明文默认密码（GitGuardian）
+
+- 本次目标：消除 GitHub **Generic Password** 类告警（典型来源：默认密码硬编码于源码、以及 `provision-admin.sql` 中存放的 bcrypt 与注释明文）。
+- 完成内容：初始密码仅来自 **`DEFAULT_NEW_USER_PASSWORD`**（`getDefaultNewUserPassword()`）；**`npm run provision-admin-sql`** 从环境生成 SQL；`docs/sql/provision-admin.sql` 改为说明文件；`compose.yaml` 的 Postgres 口令改为必填 **`${POSTGRES_PASSWORD:?...}`**；README / 交接日志 / 设计文档去掉演示口令字面量；新增 **`scripts/load-dotenv.ts`** 供 seed 与生成脚本读取根目录 `.env`。
+- 若历史提交已泄露口令：**轮换**线上 `DEFAULT_NEW_USER_PASSWORD` 与所有仍用旧初始密码的账号，并考虑 GitHub **secret scanning** 已推送密钥的吊销流程。
+- 影响文件：`src/config/default-credentials.ts`、`src/server/actions/users.ts`、`src/app/dashboard/manager/page.tsx`、`prisma/seed.ts`、`scripts/*`、`package.json`、`compose.yaml`、`.env.example`、`docs/sql/provision-admin.sql`、`README.md`、`docs/logs/*.md`、`docs/design/system-design.md`
+
 ### 2026-04-12 管理员角色、组织总览与本地 admin 登录排查
 
-- 本次目标：**单一管理员 `admin`**（`UserRole.ADMIN`）、主管挂 `adminId`、管理员仅建主管；新建用户默认密码 **`fscrm2026`**；云端可执行 **`docs/sql/provision-admin.sql`** 补管理员与挂靠；修复本地用 admin 登录报 **`CredentialsSignin`**。
+- 本次目标：**单一管理员 `admin`**（`UserRole.ADMIN`）、主管挂 `adminId`、管理员仅建主管；新建用户默认密码改为 **环境变量 `DEFAULT_NEW_USER_PASSWORD`**（仓库内无明文）；云端用 **`npm run provision-admin-sql`** 生成 SQL 补管理员与挂靠；修复本地用 admin 登录报 **`CredentialsSignin`**。
 - 完成内容：
   - **Schema / 迁移**：`UserRole.ADMIN`、`User.adminId` 及关系（`prisma/migrations/20260421103000_admin_role_admin_id`）；通话相关迁移见同目录较早文件。
   - **业务**：`createManagerUser`（仅管理员）、权限与 CRM 查询区分管理员/主管；`docs/sql/provision-admin.sql`。
   - **登录**：`src/auth.ts` 对用户名 **trim + toLowerCase** 再校验；`submitLogin` 同步小写，避免大小写不一致查不到用户。
   - **本地根因**：库中**无** `admin` 行，且曾缺 **`ADMIN` 枚举 / `adminId` 列**（仅用旧 `db push` 建库、未跑迁移历史时）；执行 **`npx prisma db push`** 对齐 schema 后 **`npm run db:seed`** 可写入 `admin` 并将 `tianmanager.adminId` 指向该管理员。
 - 影响文件（摘）：`prisma/schema.prisma`、`prisma/migrations/20260421103000_admin_role_admin_id/migration.sql`、`src/auth.ts`、`src/server/actions/auth-login.ts`、`docs/sql/provision-admin.sql`、`docs/logs/*.md`
-- 验证情况：本地 `db push` + `db:seed` 后 **`admin` + `fscrm2026`** 与 `bcrypt.compare` 通过；`npm run build` 此前已通过。
+- 验证情况：本地 `db push` + `.env` 配置初始密码 + `db:seed` 后 admin 登录与 `bcrypt.compare` 通过；`npm run build` 此前已通过。
 - 风险 / 注意事项：**生产**若已有库且无 `_prisma_migrations`，不能假设 `migrate deploy` 一步到位，需 [Prisma baseline](https://www.prisma.io/docs/guides/migrate/developing-with-prisma-migrate/baselining) 或托管方推荐的「对齐迁移表」流程；本地可暂用 **`db push`** 快速对齐开发库。
 - 下一步建议：云端 **`git pull`** → **`npm ci`** → **`npx prisma migrate deploy`**（或 baseline 后 deploy）→ **`npm run build`** → 执行 **`docs/sql/provision-admin.sql`**（或 seed，视是否接受演示数据）。
 
@@ -40,7 +47,7 @@
 
 - 本次目标：发布 **v1.0.0**；账号与微信端体验收口；设计/开发/交接文档与 **README** 对齐；打 Git tag **`v1.0.0`** 并推送 **origin/main**。
 - 完成内容：
-  - **新销售默认密码**：`DEFAULT_SALES_PASSWORD`（`demo12345`）单点配置；`createSalesUser` / `seed` 共用；主管创建销售页**醒目提示**默认密码与安全告知。
+  - **新销售默认密码**：曾由代码常量单点配置（后已改为环境变量 **`DEFAULT_NEW_USER_PASSWORD`**）；`createSalesUser` / `seed` 共用；主管创建销售页**醒目提示**初始密码与安全告知。
   - **首次登录强制改密**：`User.defaultPassword` ↔ JWT/Session `mustChangePassword`；`/dashboard` 布局拦截；`/login` 已登录且未改密直达 `/password?required=1`；`changePassword` 成功后清标记；已登录改密成功 **自动跳转工作台**（无需再点链接）。
   - **微信 / 手机**：快捷入口分端——桌面「打开 + 复制」；手机仅链接框长按复制；测评完整 URL 服务端 `getPublicSiteUrl()` + 客户端兜底；解读台内嵌链接区 HTML 结构修正（避免块级控件非法嵌套于段落）。
   - **产品清理**：移除调试用「前端包」角标与相关文件；雷达图等若干 UI 与知识库管线延续 v0.8。

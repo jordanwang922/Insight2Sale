@@ -13,12 +13,12 @@
 - **知识库 RAG 向量**：**火山方舟豆包 Embedding**；向量存 PostgreSQL `KnowledgeChunk.embeddingJson`。须 `ARK_EMBEDDING_MODEL`；多模态 Vision 须 `ARK_EMBEDDING_USE_MULTIMODAL=1`。未配置时降级 `local-hash-v1`。全量重算：`npm run db:reembed-knowledge`。设计见 **`docs/design/system-design.md` §28**。
 - **通话录音（v0.8 延续）**：解读台宽屏录音条 → 豆包语音转写 / 方舟纪要 → `/dashboard/call-recordings`；详见 §11.5、§27。
 - **v1.0 账号与安全**
-  - **新建用户默认密码**（销售 / 主管）：**`DEFAULT_NEW_USER_PASSWORD`**（`fscrm2026`，与 `DEFAULT_SALES_PASSWORD` 别名同值）；`User.defaultPassword`。
+  - **新建用户默认密码**（销售 / 主管）：环境变量 **`DEFAULT_NEW_USER_PASSWORD`**（至少 8 位，勿写入 Git）；代码见 **`getDefaultNewUserPassword()`**；`User.defaultPassword`。
   - **角色**：**`ADMIN`**（唯一管理员账号约定为 **`admin`**）仅建主管、看全组织；**`MANAGER`** 建销售；主管 **`adminId`** 指向管理员。
   - **首次登录强制改密**：`session.user.mustChangePassword`；未改密不能进 `/dashboard`；改密后自动进工作台（见 `change-password-form.tsx`）。
   - 主管在 **团队总览 → 新增销售**、管理员在 **组织总览 → 新增主管** 处有**醒目提示**默认密码与安全告知。
-  - **云端补管理员（无 seed 演示数据时）**：迁移应用后执行 **`docs/sql/provision-admin.sql`**（插入 `admin`、主管挂 `adminId`）。
-  - **本地若 `admin` 登录 `CredentialsSignin`**：先确认库里有 `ADMIN` 枚举与 `adminId`（**`npx prisma db push`** 或生产用 **`migrate deploy`**），再 **`npm run db:seed`** 或执行上述 SQL；登录用户名在服务端已 **统一小写**。
+  - **云端补管理员（无 seed 演示数据时）**：迁移应用后运行 **`npm run provision-admin-sql`** 生成 SQL（读 `.env` 中 `DEFAULT_NEW_USER_PASSWORD`），再 `psql` 执行生成结果；勿将含真实哈希的 SQL 提交到 Git。
+  - **本地若 `admin` 登录 `CredentialsSignin`**：确认 `.env` 已配置 **`DEFAULT_NEW_USER_PASSWORD`**；库结构含 `ADMIN`/`adminId` 后 **`npm run db:seed`** 或执行生成的 SQL；登录用户名在服务端已 **统一小写**。
 - **v1.0 快捷入口（工作台）**：桌面为「打开测评 + 复制链接」；**手机**仅显示只读链接框（长按复制）。链接根地址由 **`getPublicSiteUrl()`**（请求头）拼接，部署公网后随访问域名变化；可选 **`NEXT_PUBLIC_SITE_URL`** 兜底。
 - **v0.7 仍有效**：家长类型长文案来自 9 型矩阵列；通话模式简报来自矩阵行 + 最弱维等。
 
@@ -29,11 +29,11 @@
 | 领域 | 入口 |
 |------|------|
 | 设计基线 | `docs/design/system-design.md`（§11.5、§27、§28；**账号条款见路线图「账号管理补充」**） |
-| 默认密码常量 | `src/config/default-credentials.ts` |
+| 初始密码（环境变量） | `.env` → `DEFAULT_NEW_USER_PASSWORD`；读取 `src/config/default-credentials.ts` → `getDefaultNewUserPassword()` |
 | 会话与首次改密 | `src/auth.ts`（JWT 内同步 `defaultPassword`）、`src/app/dashboard/layout.tsx` |
 | 改密表单与自动跳转 | `src/components/forms/change-password-form.tsx` |
 | 创建销售 / 主管 | `src/server/actions/users.ts` → `createSalesUser` / `createManagerUser`；UI `src/app/dashboard/manager/page.tsx`（管理员与主管视图分支） |
-| 云端 provision admin | `docs/sql/provision-admin.sql`（须已应用含 `ADMIN`/`adminId` 的迁移） |
+| 云端 provision admin | `npm run provision-admin-sql` → `scripts/generate-provision-admin-sql.ts`（须已应用含 `ADMIN`/`adminId` 的迁移）；说明见 `docs/sql/provision-admin.sql` |
 | 公网站点根 URL | `src/lib/public-site-url.ts` |
 | 快捷入口 | `src/components/dashboard/quick-actions.tsx` |
 | 方舟知识库向量 | `src/lib/ai/ark-embedding.ts`、`src/features/knowledge/ingestion.ts`、`retrieval.ts` |
