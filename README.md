@@ -1,4 +1,4 @@
-# Insight2Sale v1.0.0
+# Insight2Sale v1.2.0
 
 智慧父母养育测评与销售转化 CRM。
 
@@ -6,6 +6,7 @@
 
 ## 当前版本范围
 
+- **v1.2.0**：测评 Word v2 收尾（采集第 4/11 题、题干展示、提交 **`await`**、入口页题数动态与去掉大纲四块）；**`Customer.residenceCity`** 与迁移；报告**保存分享长图**（手机宽约 390px、可读字号、`html-to-image` 布局修复）；解读台去掉 **9 型预告图块**（模版 + `stripDeskNineTypePreviewBlock`）；**`<html suppressHydrationWarning>`** 缓解扩展导致 hydration；生产部署路径 **`/var/www/crm001/Insight2Sale`** 见 **`docs/deployment/SERVER_DEPLOYMENT.md`**
 - **v1.0.0（首版）**：**新建销售/主管初始密码**由环境变量 **`DEFAULT_NEW_USER_PASSWORD`**（至少 8 位，勿提交到 Git）+ **`getDefaultNewUserPassword()`** 读取；**首次登录强制改密**（未改密不可进工作台；改密后自动进入工作台）；团队总览页**醒目提示**初始密码；**快捷入口**分端（桌面：打开 + 复制链接；手机：仅可长按复制的链接框）；测评链接根地址 **`getPublicSiteUrl()`** 随部署域名变化；移除调试用「前端包」角标；设计文档 / 开发日志 / 交接日志已对齐
 - **v0.8.0**：网页端通话录音 → 豆包语音妙记式转写 + 方舟纪要；通话管理列表与详情；`prisma generate` 纳入 install/build；开发默认端口 **3001**
 - **v0.7.0**：家长类型解读与通话模式对齐知识库 Excel 矩阵

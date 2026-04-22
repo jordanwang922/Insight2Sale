@@ -6,9 +6,9 @@
 
 ---
 
-## 当前状态（v1.0.0 + 管理员与组织 + 测评 Word v2）
+## 当前状态（v1.2.0 + 管理员与组织 + 测评 Word v2）
 
-- **版本**：`package.json` → **1.0.0**；Git 发布 tag：**`v1.0.0`**（与 package 一致）。
+- **版本**：`package.json` → **1.2.0**；Git 发布 tag：**`v1.2.0`**（与 package 一致）；上一冻结 tag：**`v1.0.0`**。
 - **智慧父母测评 v2（2026-04-22）**
   - **Word 真源**：`docs/client/智慧父母测评-v2.docx`。题库生成：`npm run assessment:gen-from-docx`；**与仓库一致性校验**：`npm run assessment:verify-word`（失败即 doc 与代码不一致）。
   - **客户表**：`Customer.residenceCity`（迁移 `prisma/migrations/20260422120000_customer_residence_city`）；生产勿忘 **`npx prisma migrate deploy`**。

@@ -23,6 +23,12 @@
 
 ## 当前记录
 
+### 2026-04-12 v1.2.0 版本号与文档对齐
+
+- **package.json / package-lock.json** → **`1.2.0`**（`npm version 1.2.0 --no-git-tag-version`）。
+- **Git tag**：**`v1.2.0`**（与 semver 一致，推送 **`origin`**）。
+- **README**、**`docs/logs/handoff-log.md`** 中版本描述已更新；v1.0.0 保留为「首版」历史条目。
+
 ### 2026-04-12 测评体验、报告长图、解读台、提交与生产部署备忘
 
 - **测评入口页**：去掉模板 **`reportOutlineJson`** 渲染的四个黄色大纲块；测评说明题数改为 **`assessmentTotalQuestionCount`**（与题库动态一致）。
