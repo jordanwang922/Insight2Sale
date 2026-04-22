@@ -3,7 +3,7 @@ import type { Session } from "next-auth";
 import { callRecordingListWhere } from "@/features/crm/call-recording-access";
 import { parseHighlightsJson } from "@/features/crm/call-recording-process";
 
-function mockSession(role: "MANAGER" | "SALES", userId: string): Session {
+function mockSession(role: "MANAGER" | "SALES" | "ADMIN", userId: string): Session {
   return {
     expires: new Date(Date.now() + 86400000).toISOString(),
     user: {
@@ -26,6 +26,11 @@ describe("callRecordingListWhere", () => {
     expect(w).toEqual({
       OR: [{ ownerId: "mgr-1" }, { owner: { managerId: "mgr-1" } }],
     });
+  });
+
+  it("管理员可查询全组织录音", () => {
+    const w = callRecordingListWhere(mockSession("ADMIN", "admin-1"));
+    expect(w).toEqual({});
   });
 });
 

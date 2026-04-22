@@ -7,7 +7,9 @@ import { signIn } from "@/auth";
  * 成功或失败均由 next-auth 通过 redirect() 完成导航（微信内可不依赖客户端 JS 提交）。
  */
 export async function submitLogin(formData: FormData) {
-  const username = String(formData.get("username") ?? "").trim();
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
   await signIn("credentials", {

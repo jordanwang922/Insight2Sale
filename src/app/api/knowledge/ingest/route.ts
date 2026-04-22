@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { ingestKnowledgeFromFormData } from "@/features/knowledge/ingest-document";
+import { isManagerOrAdmin } from "@/lib/role-access";
 
 export const runtime = "nodejs";
 /** 大 PDF + OCR 可能较慢 */
@@ -17,7 +18,7 @@ function safeRedirectPath(raw: FormDataEntryValue | null, fallback: string): str
 export async function POST(request: Request) {
   try {
     const session = await auth();
-    if (!session?.user?.id || session.user.role !== "MANAGER") {
+    if (!session?.user?.id || !isManagerOrAdmin(session.user.role)) {
       return NextResponse.json({ ok: false, error: "未登录或无权上传知识库。" }, { status: 401 });
     }
 

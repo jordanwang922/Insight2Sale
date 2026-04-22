@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireCustomerAccess, requireManagerAction } from "@/server/action-auth";
+import { requireCustomerAccess, requireManagerOrAdminAction } from "@/server/action-auth";
 
 export async function createStatusDefinition(formData: FormData) {
-  await requireManagerAction();
+  await requireManagerOrAdminAction();
 
   const code = String(formData.get("code"));
   const name = String(formData.get("name"));
@@ -30,7 +30,7 @@ export async function createStatusDefinition(formData: FormData) {
 }
 
 export async function updateStatusDefinition(formData: FormData) {
-  await requireManagerAction();
+  await requireManagerOrAdminAction();
 
   const id = String(formData.get("id") || "");
 

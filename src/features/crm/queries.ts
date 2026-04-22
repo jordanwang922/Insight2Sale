@@ -1,3 +1,4 @@
+import { UserRole } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { parseJson } from "@/lib/utils";
@@ -13,6 +14,7 @@ import {
 import { knowledgeCategories } from "@/features/knowledge/categories";
 import { categoryFromSlug } from "@/features/knowledge/category-slugs";
 import { callRecordingListWhere } from "@/features/crm/call-recording-access";
+import { isAdminRole, isManagerOrAdmin } from "@/lib/role-access";
 
 const ownerPalette = ["#f59e0b", "#8b5cf6", "#10b981", "#0ea5e9", "#ef4444", "#f97316"];
 
@@ -27,7 +29,7 @@ export async function requireSession() {
 
 export async function requireManagerSession() {
   const session = await requireSession();
-  if (!session?.user?.id || session.user.role !== "MANAGER") {
+  if (!session?.user?.id || !isManagerOrAdmin(session.user.role)) {
     return null;
   }
 
@@ -48,7 +50,7 @@ export async function getDashboardSummary() {
   const dayStart = new Date(new Date().setHours(0, 0, 0, 0));
   const dayEnd = new Date(new Date().setHours(23, 59, 59, 999));
 
-  const where = session.user.role === "MANAGER" ? {} : { ownerId: session.user.id };
+  const where = isManagerOrAdmin(session.user.role) ? {} : { ownerId: session.user.id };
   const primaryAssessment = await getPrimaryAssessment();
 
   const [customers, statuses, appointments, assignableSales] = await Promise.all([
@@ -69,24 +71,29 @@ export async function getDashboardSummary() {
       orderBy: { sortOrder: "asc" },
     }),
     prisma.appointment.findMany({
-      where:
-        session.user.role === "MANAGER"
-          ? { startAt: { gte: dayStart, lte: dayEnd } }
-          : {
-              ownerId: session.user.id,
-              startAt: { gte: dayStart, lte: dayEnd },
-            },
+      where: isManagerOrAdmin(session.user.role)
+        ? { startAt: { gte: dayStart, lte: dayEnd } }
+        : {
+            ownerId: session.user.id,
+            startAt: { gte: dayStart, lte: dayEnd },
+          },
       include: { customer: true, owner: true },
       orderBy: { startAt: "asc" },
       take: 6,
     }),
-    session.user.role === "MANAGER"
+    isAdminRole(session.user.role)
       ? prisma.user.findMany({
-          where: { role: "SALES", managerId: session.user.id },
-          orderBy: { name: "asc" },
+          where: { role: { in: [UserRole.MANAGER, UserRole.SALES] } },
+          orderBy: [{ role: "asc" }, { name: "asc" }],
           select: { id: true, name: true, username: true },
         })
-      : Promise.resolve([]),
+      : session.user.role === "MANAGER"
+        ? prisma.user.findMany({
+            where: { role: "SALES", managerId: session.user.id },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, username: true },
+          })
+        : Promise.resolve([]),
   ]);
   const customerIds = customers.map((c) => c.id);
   const nicknames = customers.map((c) => c.wechatNickname);
@@ -185,7 +192,7 @@ export async function getCustomerWorkspace(customerId: string) {
   });
 
   if (!customer) return null;
-  if (session.user.role !== "MANAGER" && customer.ownerId !== session.user.id) {
+  if (!isManagerOrAdmin(session.user.role) && customer.ownerId !== session.user.id) {
     return null;
   }
 
@@ -329,8 +336,12 @@ export async function getCalendarView(
   const monthStart = new Date(activeMonth.getFullYear(), activeMonth.getMonth(), 1);
   const monthEnd = new Date(activeMonth.getFullYear(), activeMonth.getMonth() + 1, 0, 23, 59, 59);
 
-  const visibleOwners =
-    session.user.role === "MANAGER"
+  const visibleOwners = isAdminRole(session.user.role)
+    ? await prisma.user.findMany({
+        where: { role: { in: [UserRole.MANAGER, UserRole.SALES] } },
+        orderBy: [{ role: "asc" }, { name: "asc" }],
+      })
+    : session.user.role === "MANAGER"
       ? await prisma.user.findMany({
           where: {
             OR: [{ id: session.user.id }, { managerId: session.user.id }],
@@ -384,19 +395,18 @@ export async function getCalendarView(
       selectedAppointmentId
         ? appointments.find((appointment) => appointment.id === selectedAppointmentId) ?? null
         : null,
-    customers:
-      session.user.role === "MANAGER"
-        ? await prisma.customer.findMany({
-            select: { id: true, wechatNickname: true, ownerId: true },
-            orderBy: { submittedAt: "desc" },
-            take: 30,
-          })
-        : await prisma.customer.findMany({
-            where: { ownerId: session.user.id },
-            select: { id: true, wechatNickname: true, ownerId: true },
-            orderBy: { submittedAt: "desc" },
-            take: 30,
-          }),
+    customers: isManagerOrAdmin(session.user.role)
+      ? await prisma.customer.findMany({
+          select: { id: true, wechatNickname: true, ownerId: true },
+          orderBy: { submittedAt: "desc" },
+          take: 30,
+        })
+      : await prisma.customer.findMany({
+          where: { ownerId: session.user.id },
+          select: { id: true, wechatNickname: true, ownerId: true },
+          orderBy: { submittedAt: "desc" },
+          take: 30,
+        }),
   };
 }
 
@@ -548,9 +558,101 @@ export async function getAssessmentManagementData() {
   return { templates };
 }
 
+async function loadAdminOrganizationOverview() {
+  const managers = await prisma.user.findMany({
+    where: { role: "MANAGER" },
+    orderBy: { name: "asc" },
+  });
+  const salesUsersRaw = await prisma.user.findMany({
+    where: { role: "SALES" },
+    include: { manager: { select: { id: true, name: true, username: true } } },
+    orderBy: { name: "asc" },
+  });
+  const managerIds = managers.map((m) => m.id);
+  const salesIds = salesUsersRaw.map((s) => s.id);
+  const ownerIds = [...new Set([...managerIds, ...salesIds])];
+
+  const [customers, appointments, pendingScripts, statuses] = await Promise.all([
+    prisma.customer.findMany({
+      where: { ownerId: { in: ownerIds } },
+      include: { owner: true, currentStatus: true },
+    }),
+    prisma.appointment.findMany({
+      where: { ownerId: { in: ownerIds } },
+    }),
+    salesIds.length
+      ? prisma.supplementalScript.findMany({
+          where: {
+            approvedToTemplate: false,
+            authorId: { in: salesIds },
+          },
+          include: { customer: true, author: true },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+        })
+      : Promise.resolve([]),
+    prisma.statusDefinition.findMany({
+      where: { enabled: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+  ]);
+
+  const bySales = salesUsersRaw.map((user) => {
+    const owned = customers.filter((c) => c.ownerId === user.id);
+    return {
+      user,
+      managerName: user.manager?.name ?? "—",
+      total: owned.length,
+      paid: owned.filter((item) => item.currentStatus?.code === "paid").length,
+      liveAttended: owned.filter((item) => item.currentStatus?.code === "live_attended").length,
+      liveMissed: owned.filter((item) => item.currentStatus?.code === "live_missed").length,
+      bookedConsult: owned.filter((item) => item.currentStatus?.code === "booked_consult").length,
+    };
+  });
+
+  const funnel = statuses.map((status) => ({
+    name: status.name,
+    code: status.code,
+    color: status.color,
+    count: customers.filter((c) => c.currentStatusId === status.id).length,
+  }));
+
+  return {
+    view: "admin" as const,
+    managers,
+    salesUsers: bySales,
+    rawSalesUsers: salesUsersRaw,
+    pendingScripts,
+    funnel,
+    totalCustomers: customers.length,
+    metrics: {
+      bookedConsult: customers.filter((item) => item.currentStatus?.code === "booked_consult").length,
+      consultDone: customers.filter((item) => item.currentStatus?.code === "consult_done").length,
+      liveBooked: customers.filter((item) => item.currentStatus?.code === "live_booked").length,
+      liveAttended: customers.filter((item) => item.currentStatus?.code === "live_attended").length,
+      liveMissed: customers.filter((item) => item.currentStatus?.code === "live_missed").length,
+      trialDone: customers.filter((item) => item.currentStatus?.code === "trial_done").length,
+      paid: customers.filter((item) => item.currentStatus?.code === "paid").length,
+      refunded: customers.filter((item) => item.currentStatus?.code === "refunded").length,
+      todayAppointments: appointments.filter((item) => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        return item.startAt >= start && item.startAt <= end;
+      }).length,
+    },
+  };
+}
+
 export async function getManagerOverview() {
   const session = await requireSession();
-  if (session?.user.role !== "MANAGER") return null;
+  if (!session?.user?.id) return null;
+  if (session.user.role === "ADMIN") {
+    return loadAdminOrganizationOverview();
+  }
+  if (session.user.role !== "MANAGER") return null;
 
   const [salesUsers, statuses] = await Promise.all([
     prisma.user.findMany({
@@ -592,6 +694,7 @@ export async function getManagerOverview() {
     const owned = customers.filter((customer) => customer.ownerId === user.id);
     return {
       user,
+      managerName: undefined as string | undefined,
       total: owned.length,
       paid: owned.filter((item) => item.currentStatus?.code === "paid").length,
       liveAttended: owned.filter((item) => item.currentStatus?.code === "live_attended").length,
@@ -608,6 +711,8 @@ export async function getManagerOverview() {
   }));
 
   return {
+    view: "manager" as const,
+    managers: [],
     salesUsers: bySales,
     rawSalesUsers: salesUsers,
     pendingScripts,
@@ -650,7 +755,7 @@ export async function getCallRecordingsPageData() {
       },
     }),
     prisma.customer.findMany({
-      where: session.user.role === "MANAGER" ? {} : { ownerId: session.user.id },
+      where: isManagerOrAdmin(session.user.role) ? {} : { ownerId: session.user.id },
       select: { id: true, wechatNickname: true },
       orderBy: { updatedAt: "desc" },
       take: 500,

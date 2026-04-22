@@ -10,7 +10,7 @@ export async function DashboardTopbar() {
         <h2 className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-lg font-semibold text-slate-950">
           <span className="min-w-0">{session?.user.name}</span>
           <span className="inline-flex shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-            {session?.user.role === "MANAGER" ? "主管" : "销售"}
+            {session?.user.role === "ADMIN" ? "管理员" : session?.user.role === "MANAGER" ? "主管" : "销售"}
           </span>
         </h2>
         <form

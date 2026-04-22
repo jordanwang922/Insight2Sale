@@ -20,7 +20,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: {},
       },
       authorize: async (rawCredentials) => {
-        const parsed = credentialsSchema.safeParse(rawCredentials);
+        const normalized = {
+          username: String(rawCredentials?.username ?? "")
+            .trim()
+            .toLowerCase(),
+          password: String(rawCredentials?.password ?? "").trim(),
+        };
+        const parsed = credentialsSchema.safeParse(normalized);
 
         if (!parsed.success) {
           return null;
@@ -72,7 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "MANAGER" | "SALES";
+        session.user.role = token.role as "ADMIN" | "MANAGER" | "SALES";
         session.user.mustChangePassword = Boolean(token.mustChangePassword);
       }
 

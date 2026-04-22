@@ -3,7 +3,7 @@ import "next-auth";
 declare module "next-auth" {
   interface User {
     id: string;
-    role: "MANAGER" | "SALES";
+    role: "ADMIN" | "MANAGER" | "SALES";
     mustChangePassword?: boolean;
   }
 
@@ -12,7 +12,7 @@ declare module "next-auth" {
       id: string;
       name?: string | null;
       email?: string | null;
-      role: "MANAGER" | "SALES";
+      role: "ADMIN" | "MANAGER" | "SALES";
       mustChangePassword?: boolean;
     };
   }
@@ -21,7 +21,7 @@ declare module "next-auth" {
 declare module "@auth/core/jwt" {
   interface JWT {
     id?: string;
-    role?: "MANAGER" | "SALES";
+    role?: "ADMIN" | "MANAGER" | "SALES";
     mustChangePassword?: boolean;
   }
 }

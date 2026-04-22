@@ -23,6 +23,19 @@
 
 ## 当前记录
 
+### 2026-04-12 管理员角色、组织总览与本地 admin 登录排查
+
+- 本次目标：**单一管理员 `admin`**（`UserRole.ADMIN`）、主管挂 `adminId`、管理员仅建主管；新建用户默认密码 **`fscrm2026`**；云端可执行 **`docs/sql/provision-admin.sql`** 补管理员与挂靠；修复本地用 admin 登录报 **`CredentialsSignin`**。
+- 完成内容：
+  - **Schema / 迁移**：`UserRole.ADMIN`、`User.adminId` 及关系（`prisma/migrations/20260421103000_admin_role_admin_id`）；通话相关迁移见同目录较早文件。
+  - **业务**：`createManagerUser`（仅管理员）、权限与 CRM 查询区分管理员/主管；`docs/sql/provision-admin.sql`。
+  - **登录**：`src/auth.ts` 对用户名 **trim + toLowerCase** 再校验；`submitLogin` 同步小写，避免大小写不一致查不到用户。
+  - **本地根因**：库中**无** `admin` 行，且曾缺 **`ADMIN` 枚举 / `adminId` 列**（仅用旧 `db push` 建库、未跑迁移历史时）；执行 **`npx prisma db push`** 对齐 schema 后 **`npm run db:seed`** 可写入 `admin` 并将 `tianmanager.adminId` 指向该管理员。
+- 影响文件（摘）：`prisma/schema.prisma`、`prisma/migrations/20260421103000_admin_role_admin_id/migration.sql`、`src/auth.ts`、`src/server/actions/auth-login.ts`、`docs/sql/provision-admin.sql`、`docs/logs/*.md`
+- 验证情况：本地 `db push` + `db:seed` 后 **`admin` + `fscrm2026`** 与 `bcrypt.compare` 通过；`npm run build` 此前已通过。
+- 风险 / 注意事项：**生产**若已有库且无 `_prisma_migrations`，不能假设 `migrate deploy` 一步到位，需 [Prisma baseline](https://www.prisma.io/docs/guides/migrate/developing-with-prisma-migrate/baselining) 或托管方推荐的「对齐迁移表」流程；本地可暂用 **`db push`** 快速对齐开发库。
+- 下一步建议：云端 **`git pull`** → **`npm ci`** → **`npx prisma migrate deploy`**（或 baseline 后 deploy）→ **`npm run build`** → 执行 **`docs/sql/provision-admin.sql`**（或 seed，视是否接受演示数据）。
+
 ### 2026-04-16 v1.0.0 发布（首版冻结）
 
 - 本次目标：发布 **v1.0.0**；账号与微信端体验收口；设计/开发/交接文档与 **README** 对齐；打 Git tag **`v1.0.0`** 并推送 **origin/main**。

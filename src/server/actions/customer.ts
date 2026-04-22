@@ -1,8 +1,9 @@
 "use server";
 
+import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireCustomerAccess, requireManagerAction } from "@/server/action-auth";
+import { requireCustomerAccess, requireManagerOrAdminAction } from "@/server/action-auth";
 
 export async function addFollowUpNote(formData: FormData) {
   const customerId = String(formData.get("customerId"));
@@ -30,7 +31,7 @@ export async function addFollowUpNote(formData: FormData) {
 }
 
 export async function assignCustomerOwner(formData: FormData) {
-  const session = await requireManagerAction();
+  const session = await requireManagerOrAdminAction();
   const customerId = String(formData.get("customerId") || "");
   const ownerId = String(formData.get("ownerId") || "");
 
@@ -38,19 +39,24 @@ export async function assignCustomerOwner(formData: FormData) {
     return;
   }
 
+  const assigneeWhere =
+    session.user.role === "ADMIN"
+      ? { id: ownerId, role: { in: [UserRole.MANAGER, UserRole.SALES] } }
+      : {
+          id: ownerId,
+          OR: [
+            { id: session.user.id, role: UserRole.MANAGER },
+            { role: UserRole.SALES, managerId: session.user.id },
+          ],
+        };
+
   const [customer, assignee] = await Promise.all([
     prisma.customer.findUnique({
       where: { id: customerId },
       select: { id: true, ownerId: true, wechatNickname: true },
     }),
     prisma.user.findFirst({
-      where: {
-        id: ownerId,
-        OR: [
-          { id: session.user.id, role: "MANAGER" },
-          { id: ownerId, role: "SALES", managerId: session.user.id },
-        ],
-      },
+      where: assigneeWhere,
       select: { id: true, name: true },
     }),
   ]);

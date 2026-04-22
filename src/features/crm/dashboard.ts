@@ -30,7 +30,7 @@ export function getQuickActions(role: UserRole): QuickAction[] {
     },
   ];
 
-  if (role === "MANAGER") {
+  if (role === "MANAGER" || role === "ADMIN") {
     return [
       ...shared,
       {
@@ -41,7 +41,7 @@ export function getQuickActions(role: UserRole): QuickAction[] {
       },
       {
         key: "manager",
-        label: "查看团队总览",
+        label: role === "ADMIN" ? "组织与团队总览" : "查看团队总览",
         href: "/dashboard/manager",
         kind: "link",
       },

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireActionSession, requireCustomerAccess } from "@/server/action-auth";
+import { isManagerOrAdmin } from "@/lib/role-access";
 
 export async function createAppointment(formData: FormData) {
   const session = await requireActionSession();
@@ -28,19 +29,20 @@ export async function createAppointment(formData: FormData) {
     pathToRevalidate = `/dashboard/customers/${customerId}`;
   } else if (participantName) {
     const matchedCustomer = await prisma.customer.findFirst({
-      where:
-        session.user.role === "MANAGER"
-          ? { wechatNickname: participantName }
-          : { wechatNickname: participantName, ownerId: session.user.id },
+      where: isManagerOrAdmin(session.user.role)
+        ? { wechatNickname: participantName }
+        : { wechatNickname: participantName, ownerId: session.user.id },
       select: { id: true, ownerId: true },
       orderBy: { submittedAt: "desc" },
     });
 
     if (matchedCustomer) {
       resolvedCustomerId = matchedCustomer.id;
-      resolvedOwnerId = session.user.role === "MANAGER" ? ownerId || matchedCustomer.ownerId : matchedCustomer.ownerId;
+      resolvedOwnerId = isManagerOrAdmin(session.user.role)
+        ? ownerId || matchedCustomer.ownerId
+        : matchedCustomer.ownerId;
     }
-  } else if (session.user.role !== "MANAGER" && ownerId !== session.user.id) {
+  } else if (!isManagerOrAdmin(session.user.role) && ownerId !== session.user.id) {
     throw new Error("你没有权限为其他销售创建预约。");
   }
 
@@ -80,17 +82,16 @@ export async function updateAppointment(formData: FormData) {
   });
 
   if (!appointment) return;
-  if (session.user.role !== "MANAGER" && appointment.ownerId !== session.user.id) {
+  if (!isManagerOrAdmin(session.user.role) && appointment.ownerId !== session.user.id) {
     throw new Error("你没有权限修改这个预约。");
   }
 
   let resolvedCustomerId = appointment.customerId;
   if (!resolvedCustomerId && participantName) {
     const matchedCustomer = await prisma.customer.findFirst({
-      where:
-        session.user.role === "MANAGER"
-          ? { wechatNickname: participantName }
-          : { wechatNickname: participantName, ownerId: session.user.id },
+      where: isManagerOrAdmin(session.user.role)
+        ? { wechatNickname: participantName }
+        : { wechatNickname: participantName, ownerId: session.user.id },
       select: { id: true },
       orderBy: { submittedAt: "desc" },
     });
@@ -124,7 +125,7 @@ export async function deleteAppointment(formData: FormData) {
   });
 
   if (!appointment) return;
-  if (session.user.role !== "MANAGER" && appointment.ownerId !== session.user.id) {
+  if (!isManagerOrAdmin(session.user.role) && appointment.ownerId !== session.user.id) {
     throw new Error("你没有权限删除这个预约。");
   }
 

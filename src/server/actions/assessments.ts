@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
-import { requireManagerAction } from "@/server/action-auth";
+import { requireManagerOrAdminAction } from "@/server/action-auth";
 import { extractKnowledgeText, persistKnowledgeFile } from "@/features/knowledge/ingestion";
 import { generateDoubaoJson } from "@/lib/ai/doubao";
 
@@ -52,7 +52,7 @@ async function buildAssessmentDraft(title: string, sourceText: string) {
 }
 
 export async function createAssessmentTemplate(formData: FormData) {
-  const session = await requireManagerAction();
+  const session = await requireManagerOrAdminAction();
 
   const title = String(formData.get("title") || "").trim();
   const shortNameInput = String(formData.get("shortName") || "").trim();
@@ -114,7 +114,7 @@ export async function createAssessmentTemplate(formData: FormData) {
 }
 
 export async function updateAssessmentTemplate(formData: FormData) {
-  await requireManagerAction();
+  await requireManagerOrAdminAction();
 
   const id = String(formData.get("id") || "");
   if (!id) return;

@@ -3,7 +3,7 @@
 import { unlink } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireManagerAction } from "@/server/action-auth";
+import { requireManagerOrAdminAction } from "@/server/action-auth";
 import { buildKnowledgeChunks, extractKnowledgeText, persistKnowledgeFile, summarizeKnowledge } from "@/features/knowledge/ingestion";
 import { getActiveEmbeddingModelLabel } from "@/lib/ai/ark-embedding";
 import { knowledgeCategories } from "@/features/knowledge/categories";
@@ -19,12 +19,12 @@ async function safeUnlink(filePath: string | null) {
 }
 
 export async function ingestKnowledgeDocument(formData: FormData) {
-  const session = await requireManagerAction();
+  const session = await requireManagerOrAdminAction();
   await ingestKnowledgeFromFormData(formData, session.user.id);
 }
 
 export async function updateKnowledgeDocumentState(formData: FormData) {
-  await requireManagerAction();
+  await requireManagerOrAdminAction();
   const id = String(formData.get("id") || "");
   if (!id) return;
 
@@ -44,7 +44,7 @@ export async function updateKnowledgeDocumentState(formData: FormData) {
 }
 
 export async function deleteKnowledgeDocument(formData: FormData) {
-  await requireManagerAction();
+  await requireManagerOrAdminAction();
   const id = String(formData.get("id") || "").trim();
   if (!id) {
     throw new Error("缺少条目 ID。");
@@ -64,7 +64,7 @@ export async function deleteKnowledgeDocument(formData: FormData) {
 }
 
 export async function updateKnowledgeDocument(formData: FormData) {
-  await requireManagerAction();
+  await requireManagerOrAdminAction();
 
   const id = String(formData.get("id") || "").trim();
   if (!id) {

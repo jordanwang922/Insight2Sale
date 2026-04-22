@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum UserRole {
+  ADMIN
   MANAGER
   SALES
 }
@@ -20,9 +21,14 @@ model User {
   passwordHash  String
   role          UserRole
   defaultPassword Boolean       @default(false)
+  /** 销售所属主管 */
   managerId     String?
   manager       User?           @relation("ManagerToSales", fields: [managerId], references: [id])
   teamMembers   User[]          @relation("ManagerToSales")
+  /** 主管所属管理员（ADMIN 自身为 null） */
+  adminId       String?
+  admin         User?           @relation("AdminToManagers", fields: [adminId], references: [id], onDelete: SetNull)
+  managedManagers User[]      @relation("AdminToManagers")
   personaProfile PersonaProfile?
   customers     Customer[]      @relation("SalesOwnerCustomers")
   appointments  Appointment[]
@@ -36,6 +42,7 @@ model User {
   updatedAt     DateTime        @updatedAt
 
   @@index([managerId])
+  @@index([adminId])
   @@index([role])
   @@index([username])
 }

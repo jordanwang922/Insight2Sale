@@ -4,8 +4,8 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { requireManagerAction } from "@/server/action-auth";
-import { DEFAULT_SALES_PASSWORD } from "@/config/default-credentials";
+import { requireAdminAction, requireManagerAction } from "@/server/action-auth";
+import { DEFAULT_NEW_USER_PASSWORD } from "@/config/default-credentials";
 
 export async function createSalesUser(formData: FormData) {
   const session = await requireManagerAction();
@@ -18,7 +18,7 @@ export async function createSalesUser(formData: FormData) {
     throw new Error("请填写销售姓名和登录用户名。");
   }
 
-  const passwordHash = await bcrypt.hash(DEFAULT_SALES_PASSWORD, 10);
+  const passwordHash = await bcrypt.hash(DEFAULT_NEW_USER_PASSWORD, 10);
 
   await prisma.user.create({
     data: {
@@ -35,10 +35,39 @@ export async function createSalesUser(formData: FormData) {
   revalidatePath("/dashboard/manager");
 }
 
+/** 管理员新建主管账号（初始密码与新建销售相同，首次登录须改密） */
+export async function createManagerUser(formData: FormData) {
+  const session = await requireAdminAction();
+  const name = String(formData.get("name") || "").trim();
+  const username = String(formData.get("username") || "")
+    .trim()
+    .toLowerCase();
+
+  if (!name || !username) {
+    throw new Error("请填写主管姓名和登录用户名。");
+  }
+
+  const passwordHash = await bcrypt.hash(DEFAULT_NEW_USER_PASSWORD, 10);
+
+  await prisma.user.create({
+    data: {
+      name,
+      username,
+      email: `${username}@insight2sale.local`,
+      passwordHash,
+      role: "MANAGER",
+      adminId: session.user.id,
+      defaultPassword: true,
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+}
+
 export type ChangePasswordResult = { ok: true } | { ok: false; error: string };
 
 /**
- * 修改密码（表单提交）。成功返回 `{ ok: true }`，失败返回 `{ ok: false, error }`，便于客户端展示错误而不抛错。
+ * 修改密码（表单提交）。成功返回 `{ ok: true }`，失败返回 `{ ok: false; error }`，便于客户端展示错误而不抛错。
  */
 export async function changePassword(formData: FormData): Promise<ChangePasswordResult> {
   const session = await auth();

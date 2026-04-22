@@ -11,6 +11,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { auth } from "@/auth";
+import { isManagerOrAdmin } from "@/lib/role-access";
 
 const links = [
   { href: "/dashboard", label: "工作台", icon: LayoutDashboard },
@@ -27,7 +28,7 @@ const links = [
 export async function DashboardSidebar() {
   const session = await auth();
   const visibleLinks =
-    session?.user.role === "MANAGER"
+    session?.user && isManagerOrAdmin(session.user.role)
       ? links
       : links.filter(
           (link) =>

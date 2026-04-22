@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDashboardSummary } from "@/features/crm/queries";
+import { isManagerOrAdmin } from "@/lib/role-access";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 
@@ -46,9 +47,13 @@ export default async function DashboardPage() {
                   <p className="mt-1 text-xs text-slate-500">
                     {appointment.title} · {appointment.startAt.toLocaleString("zh-CN")}
                   </p>
-                  {data.session.user.role === "MANAGER" ? (
+                  {isManagerOrAdmin(data.session.user.role) ? (
                     <p className="mt-1 text-xs text-slate-400">
-                      {appointment.owner?.id === data.session.user.id ? "主管本人" : `下属销售：${appointment.owner?.name ?? ""}`}
+                      {data.session.user.role === "ADMIN"
+                        ? `预约人：${appointment.owner?.name ?? ""}`
+                        : appointment.owner?.id === data.session.user.id
+                          ? "主管本人"
+                          : `下属销售：${appointment.owner?.name ?? ""}`}
                     </p>
                   ) : null}
                 </div>

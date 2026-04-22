@@ -216,7 +216,7 @@ export default async function CustomerWorkspacePage({
             <CustomerWorkspaceRadars
               childRadar={data.childRadar}
               parentRadar={data.parentRadar}
-              inlineGridClassName="grid min-h-0 flex-1 grid-cols-2 gap-3"
+              inlineGridClassName="grid min-h-0 flex-1 grid-cols-1 gap-3"
             />
             {report ? (
               <div className="max-h-[min(32rem,50vh)] w-full shrink-0 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] lg:max-h-none lg:overflow-visible">

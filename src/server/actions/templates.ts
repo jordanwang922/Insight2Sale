@@ -2,7 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireActionSession, requireManagerAction } from "@/server/action-auth";
+import { requireActionSession, requireManagerOrAdminAction } from "@/server/action-auth";
+import { isAdminRole, isManagerRole } from "@/lib/role-access";
+
+async function assertMayEditSalesPersona(session: { user: { id: string; role: string } }, targetUserId: string) {
+  if (isAdminRole(session.user.role)) return;
+  if (session.user.id === targetUserId) return;
+  if (isManagerRole(session.user.role)) {
+    const subordinate = await prisma.user.findFirst({
+      where: { id: targetUserId, managerId: session.user.id, role: "SALES" },
+    });
+    if (subordinate) return;
+  }
+  throw new Error("你没有权限修改该销售文案。");
+}
 
 export async function savePersonaProfile(formData: FormData) {
   const session = await requireActionSession();
@@ -10,9 +23,7 @@ export async function savePersonaProfile(formData: FormData) {
   const customerId = String(formData.get("customerId") || "");
   if (!userId) return;
 
-  if (session.user.role !== "MANAGER" && session.user.id !== userId) {
-    throw new Error("你没有权限修改该销售文案。");
-  }
+  await assertMayEditSalesPersona(session, userId);
 
   const existing = await prisma.personaProfile.findUnique({
     where: { userId },
@@ -53,9 +64,7 @@ export async function importPersonaLibraryToOpeningStyle(formData: FormData) {
   const customerId = String(formData.get("customerId") || "");
 
   if (!userId) return;
-  if (session.user.role !== "MANAGER" && session.user.id !== userId) {
-    throw new Error("你没有权限导入该销售的个人文案库。");
-  }
+  await assertMayEditSalesPersona(session, userId);
 
   const persona = await prisma.personaProfile.findUnique({
     where: { userId },
@@ -134,7 +143,7 @@ export async function submitTemplateSnippet(formData: FormData) {
 }
 
 export async function approveSupplementalScript(formData: FormData) {
-  const session = await requireManagerAction();
+  const session = await requireManagerOrAdminAction();
   const id = String(formData.get("id") || "");
   const shouldApprove = formData.get("approvedToTemplate") === "on";
   const title = String(formData.get("title") || "");
@@ -193,7 +202,7 @@ export async function approveSupplementalScript(formData: FormData) {
 }
 
 export async function updateTemplateMetadata(formData: FormData) {
-  await requireManagerAction();
+  await requireManagerOrAdminAction();
 
   const id = String(formData.get("id") || "");
   if (!id) return;

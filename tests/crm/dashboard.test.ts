@@ -17,4 +17,11 @@ describe("dashboard quick actions", () => {
     expect(actions.map((action) => action.label)).toContain("维护客户状态字典");
     expect(actions.map((action) => action.label)).toContain("查看团队总览");
   });
+
+  test("shows admin org overview label for admins", () => {
+    const actions = getQuickActions("ADMIN");
+
+    expect(actions.map((action) => action.label)).toContain("维护客户状态字典");
+    expect(actions.map((action) => action.label)).toContain("组织与团队总览");
+  });
 });

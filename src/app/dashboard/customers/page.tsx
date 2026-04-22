@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getDashboardSummary } from "@/features/crm/queries";
 import { parseJson } from "@/lib/utils";
+import { isAdminRole, isManagerOrAdmin } from "@/lib/role-access";
 import { assignCustomerOwner } from "@/server/actions/customer";
 
 export default async function CustomersPage({
@@ -81,7 +82,7 @@ export default async function CustomersPage({
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">所属销售</p>
                     <p className="mt-1 text-slate-700">{customer.owner.name}</p>
-                    {data.session.user.role === "MANAGER" ? (
+                    {isManagerOrAdmin(data.session.user.role) ? (
                       <form action={assignCustomerOwner} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                         <input type="hidden" name="customerId" value={customer.id} />
                         <select
@@ -89,7 +90,9 @@ export default async function CustomersPage({
                           defaultValue={customer.ownerId}
                           name="ownerId"
                         >
-                          <option value={data.session.user.id}>主管自己跟进</option>
+                          {!isAdminRole(data.session.user.role) ? (
+                            <option value={data.session.user.id}>主管自己跟进</option>
+                          ) : null}
                           {data.assignableSales.map((sales) => (
                             <option key={sales.id} value={sales.id}>
                               {sales.name}
@@ -197,7 +200,7 @@ export default async function CustomersPage({
                 </div>
                 <div className="min-w-0 text-slate-600">
                   <p className="truncate whitespace-nowrap">{customer.owner.name}</p>
-                  {data.session.user.role === "MANAGER" ? (
+                  {isManagerOrAdmin(data.session.user.role) ? (
                     <form action={assignCustomerOwner} className="mt-2 flex items-center gap-2">
                       <input type="hidden" name="customerId" value={customer.id} />
                       <select
@@ -205,7 +208,9 @@ export default async function CustomersPage({
                         defaultValue={customer.ownerId}
                         name="ownerId"
                       >
-                        <option value={data.session.user.id}>主管自己跟进</option>
+                        {!isAdminRole(data.session.user.role) ? (
+                          <option value={data.session.user.id}>主管自己跟进</option>
+                        ) : null}
                         {data.assignableSales.map((sales) => (
                           <option key={sales.id} value={sales.id}>
                             {sales.name}

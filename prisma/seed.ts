@@ -86,11 +86,25 @@ function buildDemoAnswers(profile: {
 async function main() {
   const passwordHash = await bcrypt.hash(DEFAULT_SALES_PASSWORD, 10);
 
+  const admin = await prisma.user.upsert({
+    where: { username: "admin" },
+    update: {},
+    create: {
+      username: "admin",
+      email: "admin@insight2sale.local",
+      name: "系统管理员",
+      passwordHash,
+      role: UserRole.ADMIN,
+      defaultPassword: true,
+    },
+  });
+
   const manager = await prisma.user.upsert({
     where: { email: "manager@insight2sale.local" },
     update: {
       username: "tianmanager",
       defaultPassword: true,
+      adminId: admin.id,
     },
     create: {
       username: "tianmanager",
@@ -98,6 +112,7 @@ async function main() {
       name: "田老师团队主管",
       passwordHash,
       role: UserRole.MANAGER,
+      adminId: admin.id,
       defaultPassword: true,
       personaProfile: {
         create: {
