@@ -3,13 +3,17 @@ import type { AssessmentReport } from "@/features/assessment/types";
 export function AssessmentReportFootnotes({
   report,
   variant = "light",
+  forSharePng = false,
 }: {
   report: AssessmentReport;
   variant?: "light" | "dark";
+  forSharePng?: boolean;
 }) {
   const box =
     variant === "dark"
-      ? "mt-4 rounded-2xl bg-black/25 p-3 text-[10px] leading-relaxed text-white/70 ring-1 ring-white/10"
+      ? forSharePng
+        ? "mt-4 rounded-2xl bg-black/25 p-4 text-xs leading-relaxed text-white/80 ring-1 ring-white/10"
+        : "mt-4 rounded-2xl bg-black/25 p-3 text-[10px] leading-relaxed text-white/70 ring-1 ring-white/10"
       : "rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-600";
 
   return (

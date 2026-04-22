@@ -363,7 +363,7 @@ export const coreQuestions: AssessmentQuestion[] =
     "id": 10,
     "dimension": "接纳情绪",
     "type": "parent",
-    "text": "当孩子因好友转学而持续难过时，您的实际做法更接近：（参考量表1,3,7）\n（如果没有转学，联想孩子其他难过的事）",
+    "text": "当孩子因好友转学而持续难过时，您的实际做法更接近：\n（如果没有转学，联想孩子其他难过的事）",
     "options": [
       {
         "label": "这种分离的滋味确实不好受，我愿意陪你一起怀念，难过多久都没关系。（5分）",
@@ -391,7 +391,7 @@ export const coreQuestions: AssessmentQuestion[] =
     "id": 11,
     "dimension": "接纳情绪",
     "type": "parent",
-    "text": "面对孩子的愤怒大吼大叫，您最近一次的实际做法更接近：（参考量表4,6,8,9,11,12）",
+    "text": "面对孩子的愤怒大吼大叫，您最近一次的实际做法更接近：",
     "options": [
       {
         "label": "会不知不觉就变得比他还大声，不受控制地要压住他的情绪。（0分）",

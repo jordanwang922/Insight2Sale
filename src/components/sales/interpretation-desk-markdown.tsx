@@ -40,10 +40,6 @@ export function isInterpretationDeskMinorHeading(line: string): boolean {
   return /^第\s*\d+\s*步[：:]/.test(t);
 }
 
-function isInterpretationDeskSpotlightLine(line: string): boolean {
-  return line.trim() === "解读前，把这张图片发给用户";
-}
-
 function isForbiddenBulletLine(line: string): boolean {
   return /^\s*🚫/.test(line);
 }
@@ -168,20 +164,6 @@ export function InterpretationDeskMarkdownBlocks({
         <p
           key={`min-${blockIndex++}`}
           className="mt-4 text-base font-bold leading-snug text-slate-900"
-        >
-          {normalizeSpaces(raw)}
-        </p>,
-      );
-      isFirstHeading = false;
-      continue;
-    }
-
-    if (isInterpretationDeskSpotlightLine(raw)) {
-      flushBody();
-      nodes.push(
-        <p
-          key={`spot-${blockIndex++}`}
-          className="mt-4 text-sm font-bold leading-snug text-slate-900"
         >
           {normalizeSpaces(raw)}
         </p>,

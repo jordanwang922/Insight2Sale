@@ -37,9 +37,22 @@ export const intakeFields: IntakeFieldDefinition[] = [
   {
     key: "residenceCity",
     label: "4、您长期居住的城市是",
-    type: "text",
+    type: "single-select",
     required: true,
-    placeholder: "例如：上海市",
+    options: [
+      { label: "一线城市（北上广深）", value: "一线城市（北上广深）" },
+      {
+        label: "新一线城市(成都/杭州/重庆/武汉/苏州/西安/南京等)",
+        value: "新一线城市(成都/杭州/重庆/武汉/苏州/西安/南京等)",
+      },
+      {
+        label: "二线城市(济南/无锡/大连/沈阳/昆明/福州/温州/厦门等)",
+        value: "二线城市(济南/无锡/大连/沈阳/昆明/福州/温州/厦门等)",
+      },
+      { label: "三线及以下城市", value: "三线及以下城市" },
+      { label: "港澳台地区", value: "港澳台地区" },
+      { label: "海外", value: "海外" },
+    ],
   },
   {
     key: "gender",
@@ -127,6 +140,8 @@ export const intakeFields: IntakeFieldDefinition[] = [
     options: [
       { label: "职场妈妈/爸爸（兼顾工作与育儿）", value: "职场妈妈/爸爸（兼顾工作与育儿）" },
       { label: "全职妈妈/爸爸", value: "全职妈妈/爸爸" },
+      { label: "孩子的奶奶/爷爷或外婆/外公", value: "孩子的奶奶/爷爷或外婆/外公" },
+      { label: "其他", value: "其他" },
     ],
   },
   {

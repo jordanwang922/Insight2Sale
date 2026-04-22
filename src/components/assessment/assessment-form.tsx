@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, startTransition } from "react";
+import { useMemo, useRef, useState } from "react";
 import { submitAssessment } from "@/server/actions/assessment";
 import { intakeFields } from "@/features/assessment/intake-fields";
 import { coreQuestions, anxietyQuestions, burnoutQuestions, competenceQuestions } from "@/features/assessment/questions";
@@ -23,10 +23,10 @@ export function AssessmentForm({ templateSlug }: { templateSlug?: string }) {
   return (
     <form
       ref={formRef}
-      action={(formData) => {
+      action={async (formData) => {
         const completionSeconds = Math.round((Date.now() - startedAt) / 1000);
         formData.set("completionSeconds", String(completionSeconds));
-        startTransition(() => submitAssessment(formData));
+        await submitAssessment(formData);
       }}
       className="space-y-8"
     >

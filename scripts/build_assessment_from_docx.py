@@ -29,6 +29,14 @@ DIM_NUM_TO_NAME = {
     "6": "自主",
 }
 
+# Word 内部审稿用语，家长端不展示
+_REF_SCALE_RE = re.compile(r"[（(]参考量表[0-9,\d，、\s]+[）)]")
+
+
+def clean_question_stem(stem: str) -> str:
+    s = _REF_SCALE_RE.sub("", stem)
+    return re.sub(r"\n{3,}", "\n\n", s).strip()
+
 
 def read_paras() -> list[str]:
     with zipfile.ZipFile(DOC) as z:
@@ -181,7 +189,7 @@ def parse_core_block(chunk: list[str]) -> tuple[list[dict], dict[int, dict]]:
                     "id": qn,
                     "dimension": dim_name,
                     "type": role,
-                    "text": stem,
+                    "text": clean_question_stem(stem),
                     "options": opts,
                 }
             )

@@ -14,6 +14,10 @@
   - **客户表**：`Customer.residenceCity`（迁移 `prisma/migrations/20260422120000_customer_residence_city`）；生产勿忘 **`npx prisma migrate deploy`**。
   - **计分与报告**：`src/features/assessment/scoring.ts`（Word 分档与 9 型矩阵）、`report-normalize.ts`（旧快照兼容）、`report-word-copy.ts`（脚注）；用户结果页 + 长图 + 解读台（SOP 仍为原解读台模版流程）见 `assessment/result/*`、`assessment-report-*`、`customers/[customerId]/page.tsx`。
   - **部署说明**：**`docs/deployment/SERVER_DEPLOYMENT.md`**（生产路径 **`/var/www/crm001/Insight2Sale`**、迁移、PM2、Nginx、`storage/`）。
+  - **本轮（2026-04-12）**：测评页去掉大纲四块、题数动态、采集第 4/11 题调整、题干去参考量表括号、提交 **`await`** 修复、**`<html suppressHydrationWarning>`**、分享长图布局与 **`forSharePng`** 手机字号、解读台 **`stripDeskNineTypePreviewBlock`**（去掉 9 型图 8 + 上下话术，模版与知识库旧文均可剥）。
+- **生产库 `Customer.residenceCity`（必做）**
+  - 理想：**`cd /var/www/crm001/Insight2Sale && npx prisma migrate deploy`**（须迁移历史与库一致；若从未用过 Migrate 见 Prisma **Baseline** 文档后再 deploy）。
+  - 若 **`migrate deploy` 报 P3005** 等历史不一致：可 **一次性** 在本机/预发验证过的环境下对生产执行 **`npx prisma db push`** 仅同步 schema（**生产慎用**，会绕过迁移文件记录；或手工执行 **`ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "residenceCity" TEXT;`** 与 Prisma 一致）。完成后销售后台 **`customer.findMany`** 才不再报错。
 - **产品定位**：测评 + 销售 CRM（解读台、客户、日历、知识库、**主管视图 + 管理员组织总览**），非单一测评工具。
 - **知识库 RAG 向量**：**火山方舟豆包 Embedding**；向量存 PostgreSQL `KnowledgeChunk.embeddingJson`。须 `ARK_EMBEDDING_MODEL`；多模态 Vision 须 `ARK_EMBEDDING_USE_MULTIMODAL=1`。未配置时降级 `local-hash-v1`。全量重算：`npm run db:reembed-knowledge`。设计见 **`docs/design/system-design.md` §28**。
 - **通话录音（v0.8 延续）**：解读台宽屏录音条 → 豆包语音转写 / 方舟纪要 → `/dashboard/call-recordings`；详见 §11.5、§27。
@@ -47,6 +51,8 @@
 | 通话 API | `src/app/api/call-recordings/**` |
 | 矩阵列/行抽取 | `src/features/knowledge/parent-type-matrix.ts` |
 | 客户解读台页 | `src/app/dashboard/customers/[customerId]/page.tsx` |
+| 解读台模版剥离 9 型预告块 | `stripDeskNineTypePreviewBlock` → `src/features/sales/interpretation-desk-template.ts`；模版 `src/features/sales/assets/interpretation-desk-template.txt` |
+| 分享长图 PNG | `src/components/assessment/assessment-report-share-panel.tsx`；`forSharePng` 子组件与 **`RadarChartCardDual.forSharePng`** |
 | 开发日志 | `docs/logs/development-log.md` |
 | 实机测豆包语音 | `scripts/test-volc-speech-live.ts` |
 
@@ -67,7 +73,7 @@
 
 ## 下一步建议
 
-1. **部署文档与上线**：见团队下一版「部署文档」；生产执行 **`npm run build`**、**`prisma migrate deploy`**；**`storage/call-recordings/`** 持久化或对象存储。
+1. **部署与上线**：**`docs/deployment/SERVER_DEPLOYMENT.md`**（路径 **`/var/www/crm001/Insight2Sale`**、`git pull`、`npm ci`、`migrate deploy`、build、PM2、Nginx）；**`storage/`** 持久化；**`residenceCity`** 见上文「生产库」。
 2. **验收**：首次改密全链路、快捷入口链接在 HTTPS 公网域名下是否正确。
 3. **知识库**：生产配置 Embedding 接入点后按需 **`npm run db:reembed-knowledge`**。
 

@@ -23,6 +23,19 @@
 
 ## 当前记录
 
+### 2026-04-12 测评体验、报告长图、解读台、提交与生产部署备忘
+
+- **测评入口页**：去掉模板 **`reportOutlineJson`** 渲染的四个黄色大纲块；测评说明题数改为 **`assessmentTotalQuestionCount`**（与题库动态一致）。
+- **信息采集**：第 4 题「长期居住城市」改为 **6 档单选**（一线/新一线/二线/三线及以下/港澳台/海外）；第 11 题养育角色增加 **孩子的奶奶/爷爷或外婆/外公**、**其他**。
+- **题库题干**：核心题 10 / 11 去掉「（参考量表…）」；**`build_assessment_from_docx.py`** 增加 **`clean_question_stem`**，从 Word 再生成时自动剥除，**`npm run assessment:verify-word`** 仍通过。
+- **提交测评**：**`assessment-form.tsx`** 对 Server Action 使用 **`await submitAssessment(formData)`**，修复「提交并生成报告无反应 / redirect 不完成」。
+- **Hydration**：**`layout.tsx`** 根 **`<html>`** 增加 **`suppressHydrationWarning`**，缓解浏览器扩展（如沉浸式翻译）注入 `data-*` 导致的 hydration 报错。
+- **保存分享长图**：**`html-to-image`** — 去掉包裹 **`overflow-x-auto`**、雷达区去掉 **`translateZ(0)`**、**`toPng`** 传入实测 **`width`/`height`** 与样式锁定，修复导出图「大半空白、内容挤一侧」；长图卡片 **约 390px 宽**、根 **`text-[16px]`**，子组件 **`forSharePng`** + **`RadarChartCardDual.forSharePng`** 放大手机可读字号与雷达标签。
+- **解读台 SOP**：仓库 **`interpretation-desk-template.txt`** 删除「解读前发图 8 + 相关话术」段；**`stripDeskNineTypePreviewBlock`** 在 **`buildInterpretationDeskMarkdownForDisplay`** / **`getInterpretationDeskRawForAi`** 中剥离同结构块（知识库旧切片仍生效）；**`interpretation-desk-markdown.tsx`** 移除对已删「解读前」行的单独 spotlight 渲染。
+- **影响文件（摘）**：`src/app/assessment/[slug]/page.tsx`、`src/app/layout.tsx`、`src/features/assessment/intake-fields.ts`、`questions.ts`、`questions.generated.ts`、`scripts/build_assessment_from_docx.py`、`src/components/assessment/assessment-form.tsx`、`assessment-report-*.tsx`、`radar-chart-card.tsx`、`interpretation-desk-template.ts`、**`interpretation-desk-template.txt`**、`interpretation-desk-markdown.tsx`、`tests/features/sales/interpretation-desk-normalize.test.ts`
+- **验证**：**`npm test`**、**`npm run build`**、**`npm run assessment:verify-word`**。
+- **生产数据库**：若此前未跑过 Migrate，见交接日志 **`residenceCity`** 与 **`migrate deploy` / baseline / 应急 `db push`** 说明。
+
 ### 2026-04-12 部署文档：生产服务器根路径
 
 - **`docs/deployment/SERVER_DEPLOYMENT.md`**、**`docs/logs/handoff-log.md`** 中示例根路径统一为 **`/var/www/crm001/Insight2Sale`**（与当前生产目录一致）。

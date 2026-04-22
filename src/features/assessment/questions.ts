@@ -25,3 +25,7 @@ export const coreQuestions = rawCoreQuestions.map(enrichQuestion);
 export const anxietyQuestions = rawAnxietyQuestions.map(enrichQuestion);
 export const burnoutQuestions = rawBurnoutQuestions.map(enrichQuestion);
 export const competenceQuestions = rawCompetenceQuestions.map(enrichQuestion);
+
+/** 用户端测评说明等处使用的总题数（与题库一致） */
+export const assessmentTotalQuestionCount =
+  coreQuestions.length + anxietyQuestions.length + burnoutQuestions.length + competenceQuestions.length;

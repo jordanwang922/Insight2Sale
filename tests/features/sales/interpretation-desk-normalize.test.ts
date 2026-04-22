@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { normalizeInterpretationDeskPlainText } from "@/features/sales/interpretation-desk-template";
+import {
+  injectOrderedFiguresFromTemplate,
+  normalizeInterpretationDeskPlainText,
+  stripDeskNineTypePreviewBlock,
+} from "@/features/sales/interpretation-desk-template";
 
 describe("normalizeInterpretationDeskPlainText", () => {
   test("merges PDF soft line breaks within a sentence", () => {
@@ -29,5 +33,27 @@ describe("normalizeInterpretationDeskPlainText", () => {
     expect(out).toContain("🚫 不许用太多专业名词");
     expect(out).toContain("我们解读的任务不是教育");
     expect(out).not.toMatch(/专业名词我们解读/);
+  });
+});
+
+describe("stripDeskNineTypePreviewBlock", () => {
+  test("removes 解读前/图8/相关话术 block before 二、解读 7 步法 (placeholder)", () => {
+    const raw = `前文\n解读前，把这张图片发给用户\n【这里放图 8.jpeg】\n相关话术：\n猜类型\n二、解读 7 步法\n第 1 步`;
+    const out = stripDeskNineTypePreviewBlock(raw);
+    expect(out).toContain("前文");
+    expect(out).toContain("二、解读 7 步法");
+    expect(out).not.toContain("解读前");
+    expect(out).not.toContain("相关话术");
+    expect(out).not.toContain("【这里放图");
+  });
+
+  test("removes block after markdown figure injection", () => {
+    const withMd = injectOrderedFiguresFromTemplate(
+      "解读前，把这张图片发给用户\n【这里放图 8.jpeg】\n相关话术：\nX\n二、解读 7 步法",
+    );
+    const out = stripDeskNineTypePreviewBlock(withMd);
+    expect(out).toContain("二、解读 7 步法");
+    expect(out).not.toContain("解读前");
+    expect(out).not.toMatch(/figure-8/);
   });
 });

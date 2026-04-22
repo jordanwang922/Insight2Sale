@@ -138,6 +138,7 @@ function SvgSixAxisRadarDual({
   parentColor,
   compact,
   docked,
+  shareExport,
 }: {
   childData: RadarDatum[];
   parentData: RadarDatum[];
@@ -146,13 +147,15 @@ function SvgSixAxisRadarDual({
   compact: boolean;
   /** 左侧固定条：线条加粗、字更大、略放大绘图区 */
   docked?: boolean;
+  /** 分享长图 PNG：维度标签再放大，便于手机全屏阅读 */
+  shareExport?: boolean;
 }) {
   const { child: cRows, parent: pRows, n } = alignDualRadar(childData, parentData);
   const axisSource = cRows.length >= pRows.length ? cRows : pRows;
   const dock = Boolean(compact && docked);
-  const maxR = compact ? (dock ? 116 : 108) : 118;
-  const labelR = maxR + (compact ? (dock ? 42 : 36) : 46);
-  const fontSize = compact ? (dock ? 32 : 26) : 30;
+  const maxR = compact ? (shareExport ? 96 : dock ? 116 : 108) : 118;
+  const labelR = maxR + (compact ? (shareExport ? 44 : dock ? 42 : 36) : 46);
+  const fontSize = compact ? (shareExport ? 30 : dock ? 32 : 26) : 30;
   const strokeGrid = compact ? (dock ? 1.05 : 0.85) : 1;
   const edgeStrokeW = dock ? 3.1 : compact ? 1.8 : 2.2;
   const parentFill = dock ? 0.26 : 0.18;
@@ -244,7 +247,7 @@ function SvgSixAxisRadarDual({
         const lx = CX + labelR * Math.cos(ang);
         const ly = CY + labelR * Math.sin(ang);
         const rawD = dim.trim();
-        const maxLen = dock ? 8 : 6;
+        const maxLen = shareExport ? 10 : dock ? 8 : 6;
         const text =
           compact && rawD.length > maxLen ? `${rawD.slice(0, maxLen - 1)}…` : rawD;
         return (
@@ -302,6 +305,8 @@ export interface RadarChartCardDualProps {
   compact?: boolean;
   /** 左侧滚动固定条专用：加粗曲线、提对比、放大标签与画布 */
   docked?: boolean;
+  /** 保存分享长图：标题/图例/雷达标签按手机可读性放大 */
+  forSharePng?: boolean;
   className?: string;
 }
 
@@ -317,6 +322,7 @@ export function RadarChartCardDual({
   fillAvailableHeight = false,
   compact = false,
   docked = false,
+  forSharePng = false,
   className,
 }: RadarChartCardDualProps) {
   const stretch = fillAvailableHeight && !compact;
@@ -327,7 +333,7 @@ export function RadarChartCardDual({
     <div
       className={cn(
         "rounded-3xl border border-white/10 bg-slate-950/85 text-white shadow-[0_25px_80px_rgba(15,23,42,0.35)]",
-        compact ? "p-3.5" : "p-4 sm:p-5",
+        compact ? (forSharePng ? "p-4" : "p-3.5") : "p-4 sm:p-5",
         dock && "p-4",
         stretch && "flex h-full min-h-0 flex-col",
         className,
@@ -337,7 +343,8 @@ export function RadarChartCardDual({
         className={cn(
           "mb-3 flex shrink-0 items-start justify-between gap-2 sm:mb-4",
           stretch && "mb-3",
-          compact && "mb-2",
+          compact && !forSharePng && "mb-2",
+          compact && forSharePng && "mb-3",
           dock && "mb-3",
         )}
       >
@@ -346,9 +353,11 @@ export function RadarChartCardDual({
             "min-w-0 flex-1 font-semibold leading-snug",
             dock
               ? "text-base sm:text-lg"
-              : compact
-                ? "text-sm sm:text-base"
-                : "text-[11px] leading-tight sm:text-sm md:text-base",
+              : compact && forSharePng
+                ? "text-base leading-snug"
+                : compact
+                  ? "text-sm sm:text-base"
+                  : "text-[11px] leading-tight sm:text-sm md:text-base",
           )}
         >
           {title}
@@ -356,19 +365,25 @@ export function RadarChartCardDual({
         <div
           className={cn(
             "flex shrink-0 flex-col items-end gap-1 font-medium text-white/90 sm:flex-row sm:items-center sm:gap-2",
-            dock ? "gap-1.5 text-xs sm:text-sm" : "text-[11px] sm:text-xs",
+            dock ? "gap-1.5 text-xs sm:text-sm" : forSharePng && compact ? "gap-1.5 text-sm" : "text-[11px] sm:text-xs",
           )}
         >
           <span className="inline-flex items-center gap-1.5">
             <span
-              className={cn("shrink-0 rounded-full", dock ? "h-3 w-3" : "h-2.5 w-2.5")}
+              className={cn(
+                "shrink-0 rounded-full",
+                dock || (compact && forSharePng) ? "h-3 w-3" : "h-2.5 w-2.5",
+              )}
               style={{ backgroundColor: childColor }}
             />
             孩子
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span
-              className={cn("shrink-0 rounded-full", dock ? "h-3 w-3" : "h-2.5 w-2.5")}
+              className={cn(
+                "shrink-0 rounded-full",
+                dock || (compact && forSharePng) ? "h-3 w-3" : "h-2.5 w-2.5",
+              )}
               style={{ backgroundColor: parentColor }}
             />
             家长
@@ -377,9 +392,11 @@ export function RadarChartCardDual({
       </div>
       <div
         className={cn(
-          "w-full min-w-0 overflow-hidden [transform:translateZ(0)]",
+          /** 勿加 translateZ(0)：html-to-image 经 foreignObject 截图时易把画布拉宽、内容挤到一侧 */
+          "w-full min-w-0 overflow-hidden",
           dock && "min-h-[340px] h-[22rem] sm:min-h-[380px] sm:h-96",
-          compact && !dock && "min-h-[280px] h-72 sm:min-h-[300px] sm:h-80",
+          compact && !dock && forSharePng && "min-h-[300px] h-[22rem] sm:min-h-[320px] sm:h-96",
+          compact && !dock && !forSharePng && "min-h-[280px] h-72 sm:min-h-[300px] sm:h-80",
           !compact && !stretch && "min-h-[280px] h-[22rem] sm:min-h-[300px] sm:h-80",
           stretch && "min-h-80 flex-1",
         )}
@@ -392,6 +409,7 @@ export function RadarChartCardDual({
             parentColor={parentColor}
             compact={compact}
             docked={docked}
+            shareExport={Boolean(forSharePng && compact)}
           />
         ) : (
           <div className="flex h-full min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 text-center text-xs text-slate-300 sm:text-sm">

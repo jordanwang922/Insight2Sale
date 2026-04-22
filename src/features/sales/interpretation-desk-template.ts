@@ -188,6 +188,21 @@ export function injectOrderedFiguresFromTemplate(text: string): string {
   });
 }
 
+/**
+ * 移除「9 型矩阵」预告块：解读前发图 + 图 8 +「相关话术」示例（与模版/旧版知识库一致）。
+ * 在插图已注入为 `![](/knowledge/sop/figure-8.jpeg)` 之后调用亦可匹配。
+ */
+export function stripDeskNineTypePreviewBlock(text: string): string {
+  const t = text.replace(/\r\n/g, "\n");
+  return t
+    .replace(
+      /(?:^|\n)解读前，把这张图片发给用户\s*\n[\s\S]*?(?=\n二、解读\s*7\s*步法)/,
+      "\n",
+    )
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** 为 true 时解读台 SOP 始终用仓库内 `interpretation-desk-template.txt`，忽略知识库《解读台模版》切片（便于本地改模版立即生效；线上更新话术请改知识库或临时开此开关验证）。 */
 function useRepoInterpretationDeskTemplateOnly(): boolean {
   const v = process.env.INTERPRETATION_DESK_USE_REPO_TEMPLATE?.trim().toLowerCase();
@@ -211,6 +226,7 @@ export function buildInterpretationDeskMarkdownForDisplay(
   t = stripFigureUiNotes(t);
   t = normalizeInterpretationDeskPlainText(t);
   t = injectOrderedFiguresFromTemplate(t);
+  t = stripDeskNineTypePreviewBlock(t);
   return t.trim();
 }
 
@@ -222,6 +238,7 @@ export function getInterpretationDeskRawForAi(kbChunks: Array<{ content: string 
       : mergeChunksRemovingOverlap(kbChunks.map((c) => c.content));
   let t = stripPageMarkers(raw);
   t = dedupeDuplicateStepOneAfterSevenWays(t);
+  t = stripDeskNineTypePreviewBlock(t);
   return t.trim();
 }
 
