@@ -23,6 +23,21 @@
 
 ## 当前记录
 
+### 2026-04-22 智慧父母测评 v2（Word 对齐）、报告与部署文档
+
+- 本次目标：以 **`docs/client/智慧父母测评-v2.docx`** 为真源对齐采集与题库；报告计分与 Word「三、计分规则」一致；用户端与解读台展示完整报告块；可核对、可部署。
+- 完成内容：
+  - **采集**：`intake-fields.ts` 按 Word 前段（含 **长期居住城市**）；`Customer.residenceCity` + 迁移 `20260422120000_customer_residence_city`；`submitAssessment` 写入；客户页展示。
+  - **题库**：`scripts/build_assessment_from_docx.py` 从 docx 生成 `questions.generated.ts` / `question-details.generated.ts`；`npm run assessment:gen-from-docx`；**`npm run assessment:verify-word`** 逐项比对 Word 与仓库 JSON（题干/选项/分值/脚注）。
+  - **计分**：`scoring.ts` — 六维 15 分档（13–15/9–12/0–8）、情感支持度与规则引导度 45 分档（37–45/27–36/0–26）、9 型矩阵、三指数话术档与百分制；`report-word-copy.ts` 脚注与 Word 503–505 一致（「教育能力感」用词与句末标点已对齐）。
+  - **报告 UI**：结果页与长图含雷达、分档、三指数、家长类型矩阵说明、课程建议、脚注；解读台在 SOP 前增加与家长端一致的报告块；`normalizeAssessmentReport` 兼容旧快照。
+  - **依赖**：`html-to-image`（报告长图导出）。
+  - **部署**：新增 **`docs/deployment/SERVER_DEPLOYMENT.md`**（路径、迁移、PM2、Nginx、storage、升级命令）。
+- 影响文件（摘）：`prisma/schema.prisma`、`prisma/migrations/*residence*`、`prisma/seed.ts`、`src/features/assessment/*`、`src/server/actions/assessment.ts`、`src/app/assessment/**`、`src/app/dashboard/customers/**`、`src/components/assessment/**`、`scripts/build_assessment_from_docx.py`、`scripts/verify_word_vs_repo.py`、`tests/assessment/*.test.ts`、`package.json`、`docs/logs/*.md`、`docs/deployment/SERVER_DEPLOYMENT.md`、`docs/client/智慧父母测评-v2.docx`、`.gitignore`
+- 验证情况：**`npm run assessment:verify-word`** 通过；**`npm test`**（含 `word-bands`、`word-scoring-boundaries`）；**`npm run build`** 通过。
+- 风险 / 注意事项：历史 **`ReportSnapshot.reportData`** 可由 normalize 补字段；若需库内报告数值与新版算法完全一致，需另行批量重算写回；生产 **`storage/`** 须持久化。
+- 下一步建议：生产执行 **`migrate deploy`** 后回归测评全流程与解读台；按需 **`db:reembed-knowledge`**。
+
 ### 2026-04-22 安全：移除仓库内明文默认密码（GitGuardian）
 
 - 本次目标：消除 GitHub **Generic Password** 类告警（典型来源：默认密码硬编码于源码、以及 `provision-admin.sql` 中存放的 bcrypt 与注释明文）。

@@ -11,6 +11,12 @@ import { ParentTypeInterpretationText } from "@/components/sales/parent-type-int
 import { CallModeBriefText } from "@/components/sales/call-mode-brief-text";
 import { buildWorkspaceCallModeBrief } from "@/features/crm/call-mode-brief";
 import { CustomerCallRecordingBar } from "@/components/call-recording/customer-call-recording-bar";
+import { AssessmentReportSharePanel } from "@/components/assessment/assessment-report-share-panel";
+import { AssessmentReportCourseBlock } from "@/components/assessment/assessment-report-course-block";
+import { AssessmentReportFootnotes } from "@/components/assessment/assessment-report-footnotes";
+import { AssessmentReportIndexCards } from "@/components/assessment/assessment-report-index-cards";
+import { AssessmentReportParentTypeBlock } from "@/components/assessment/assessment-report-parent-type-block";
+import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
 import { buildInterpretationDeskDisplayPieces } from "@/features/sales/sop-doc-pieces";
 import {
   applyInterpretationDeskLiveData,
@@ -39,7 +45,7 @@ export default async function CustomerWorkspacePage({
   if (!data) return null;
 
   const kb = data.kbWorkspaceInterpretation;
-  const report = data.reportData;
+  const report = normalizeAssessmentReport(data.reportData);
   /** 知识库《解读台模版.pdf》切片；缺省用仓库内从该 PDF 导出的纯文本 */
   const deskChunks = data.knowledge.interpretationDeskTemplate;
   const aiOutput = report
@@ -98,6 +104,7 @@ export default async function CustomerWorkspacePage({
   const customerFacts = [
     ["微信昵称", data.customer.wechatNickname],
     ["手机号", data.customer.phone ?? "未填写"],
+    ["长期居住城市", data.customer.residenceCity ?? "未填写"],
     ["会员情况", data.customer.memberStatus ?? "未填写"],
     ["性别", data.customer.gender ?? "未填写"],
     ["年龄段", data.customer.ageRange ?? "未填写"],
@@ -109,7 +116,7 @@ export default async function CustomerWorkspacePage({
     ["养育角色", data.customer.parentingRole ?? "未填写"],
     ["职业类别", data.customer.occupationCategory ?? "未填写"],
     ["职业描述", data.customer.occupationDetail ?? "未填写"],
-    ["所在城市", data.customer.ipLocation ?? "未填写"],
+    ["IP 属地/系统记录", data.customer.ipLocation ?? "未填写"],
     ["来源", data.customer.source ?? "未填写"],
     ["当前状态", data.customer.currentStatus?.name ?? "未填写"],
     ["核心难题", data.customer.coreProblem ?? "未填写"],
@@ -228,6 +235,34 @@ export default async function CustomerWorkspacePage({
             ) : null}
           </div>
         </div>
+
+        {report ? (
+          <div className="min-w-0 space-y-4">
+            <AssessmentReportParentTypeBlock report={report} />
+            <AssessmentReportIndexCards report={report} />
+            <AssessmentReportCourseBlock report={report} />
+            <AssessmentReportFootnotes report={report} />
+          </div>
+        ) : null}
+
+        {report ? (
+          <article className="min-w-0 rounded-[2rem] border border-violet-200 bg-gradient-to-br from-violet-50/80 to-white p-4 sm:p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-violet-700">报告长图</p>
+            <h2 className="mt-2 text-lg font-semibold text-slate-950">与家长端一致的分享图</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              便于顾问现场展示或转发家长自行保存；数据来自该客户最近一次测评快照。
+            </p>
+            <div className="mt-4">
+              <AssessmentReportSharePanel
+                nickname={data.customer.wechatNickname}
+                report={report}
+                childRadar={data.childRadar}
+                parentRadar={data.parentRadar}
+                fileNameBase="解读台-测评报告"
+              />
+            </div>
+          </article>
+        ) : null}
 
         <article className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">解读SOP</p>

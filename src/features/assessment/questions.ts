@@ -10,7 +10,7 @@ import { questionDetailMap } from "./question-details.generated";
 
 function enrichQuestion<T extends { id: number }>(question: T) {
   const detail = questionDetailMap[question.id];
-
+  /** 仅以 Word 导出的解析为准；无解析则留空 */
   return {
     ...question,
     theory: detail?.theory ?? [],

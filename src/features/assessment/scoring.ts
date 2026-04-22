@@ -3,6 +3,7 @@ import {
   AssessmentQuestion,
   AssessmentReport,
   DimensionScore,
+  DimensionWordBand,
   IndexScore,
   ParentTypeDefinition,
 } from "./types";
@@ -15,6 +16,7 @@ import {
   parentTypeDefinitions,
 } from "./questions";
 import { getDimensionCourseReason } from "./course-mapping";
+import { WORD_COMPETENCE_CLARIFICATION, WORD_PERCENT_CONVERSION_NOTE } from "./report-word-copy";
 
 function getScoreMap(answers: AssessmentAnswer[]) {
   return new Map(answers.map((answer) => [answer.questionId, answer.score]));
@@ -24,34 +26,86 @@ function sumQuestionScores(scoreMap: Map<number, number>, questions: AssessmentQ
   return questions.reduce((total, question) => total + (scoreMap.get(question.id) ?? 0), 0);
 }
 
-function toIndexScore(scoreMap: Map<number, number>, questions: AssessmentQuestion[]): IndexScore {
+/** Word：单维度孩子或家长 3 题满分 15，13–15 优势，9–12 潜力，0–8 卡点 */
+function dimensionWordBandFromRaw15(raw: number): DimensionWordBand {
+  if (raw >= 13) return "优势";
+  if (raw >= 9) return "潜力";
+  return "卡点";
+}
+
+/** Word：情感支持度 / 规则引导度 各 9 题家长侧满分 45 */
+function supportGuidanceWordBand045(raw: number): DimensionWordBand {
+  if (raw >= 37) return "优势";
+  if (raw >= 27) return "潜力";
+  return "卡点";
+}
+
+function anxietyVerbalFromRaw(raw: number): string {
+  if (raw >= 9) return "很焦虑";
+  if (raw >= 4) return "比较焦虑";
+  return "从容";
+}
+
+function burnoutVerbalFromRaw(raw: number): string {
+  if (raw >= 9) return "很疲惫";
+  if (raw >= 4) return "比较疲惫";
+  return "轻松";
+}
+
+function competenceVerbalFromRaw(raw: number): string {
+  if (raw >= 9) return "自我评估-教养能力强";
+  if (raw >= 4) return "自我评估-教养能力待提升";
+  return "自我评估-教养能力弱";
+}
+
+function toIndexScore(
+  scoreMap: Map<number, number>,
+  questions: AssessmentQuestion[],
+  verbal: (raw: number) => string,
+): IndexScore {
   const score = sumQuestionScores(scoreMap, questions);
   const maxScore = questions.length * 5;
   const percent = Math.round((score / maxScore) * 100);
-
-  return { score, maxScore, percent };
+  return { score, maxScore, percent, verbalBand: verbal(score) };
 }
 
-function toParentType(dimensionScores: DimensionScore[]): ParentTypeDefinition {
-  const support = dimensionScores
-    .slice(0, 3)
-    .reduce((sum, item) => sum + item.parentPercent, 0) / 3;
-  const guidance = dimensionScores
-    .slice(3)
-    .reduce((sum, item) => sum + item.parentPercent, 0) / 3;
+function sumParentRawForDimensions(scoreMap: Map<number, number>, dimNames: readonly string[]): number {
+  let total = 0;
+  for (const name of dimNames) {
+    const items = coreQuestions.filter((q) => q.dimension === name && q.type === "parent");
+    total += sumQuestionScores(scoreMap, items);
+  }
+  return total;
+}
 
-  let index = 8;
+/**
+ * Word 文档 9 型矩阵：情感支持度（维度1+2+3）为行、规则引导度（4+5+6）为列。
+ * 高/中/低按原始分 37–45 / 27–36 / 0–26。
+ */
+function toParentTypeFromWordMatrix(
+  emotionalSupportRaw: number,
+  ruleGuidanceRaw: number,
+): ParentTypeDefinition {
+  const s = supportGuidanceWordBand045(emotionalSupportRaw);
+  const g = supportGuidanceWordBand045(ruleGuidanceRaw);
+  const table: Record<DimensionWordBand, Record<DimensionWordBand, number>> = {
+    优势: { 优势: 0, 潜力: 1, 卡点: 2 },
+    潜力: { 优势: 3, 潜力: 4, 卡点: 5 },
+    卡点: { 优势: 6, 潜力: 7, 卡点: 8 },
+  };
+  const index = table[s][g];
+  return parentTypeDefinitions[index]!;
+}
 
-  if (support >= 65 && guidance >= 65) index = 0;
-  else if (support >= 65 && guidance >= 45) index = 1;
-  else if (support < 50 && guidance >= 65) index = 2;
-  else if (support >= 65 && guidance < 45)
-    index = dimensionScores.some((item) => item.gap > 5) ? 3 : 4;
-  else if (support >= 50 && support < 65 && guidance >= 65) index = 5;
-  else if (support >= 65 && guidance < 30) index = 6;
-  else if (support < 50 && guidance >= 45) index = 7;
-
-  return parentTypeDefinitions[index];
+function combinedLevelFromWordBands(
+  childBand: DimensionWordBand,
+  parentBand: DimensionWordBand,
+): "高" | "中" | "低" {
+  const order = (b: DimensionWordBand) => (b === "卡点" ? 0 : b === "潜力" ? 1 : 2);
+  const worst = order(childBand) <= order(parentBand) ? childBand : parentBand;
+  if (worst === "卡点") return "低";
+  if (worst === "潜力") return "中";
+  return "高";
 }
 
 function buildMatchAnalysis(dimensionScores: DimensionScore[]) {
@@ -87,7 +141,9 @@ export function scoreAssessment(answers: AssessmentAnswer[]): AssessmentReport {
     const parentMaxScore = parentItems.length * 5;
     const childPercent = Math.round((childScore / childMaxScore) * 100);
     const parentPercent = Math.round((parentScore / parentMaxScore) * 100);
-    const average = (childPercent + parentPercent) / 2;
+    const childWordBand = dimensionWordBandFromRaw15(childScore);
+    const parentWordBand = dimensionWordBandFromRaw15(parentScore);
+    const level = combinedLevelFromWordBands(childWordBand, parentWordBand);
 
     return {
       name: dimension.name,
@@ -99,14 +155,20 @@ export function scoreAssessment(answers: AssessmentAnswer[]): AssessmentReport {
       parentMaxScore,
       parentPercent,
       gap: parentPercent - childPercent,
-      level: average >= 70 ? "高" : average >= 40 ? "中" : "低",
+      level,
+      childWordBand,
+      parentWordBand,
     };
   });
 
-  const anxiety = toIndexScore(scoreMap, anxietyQuestions);
-  const burnout = toIndexScore(scoreMap, burnoutQuestions);
-  const competence = toIndexScore(scoreMap, competenceQuestions);
-  const parentType = toParentType(dimensionScores);
+  const anxiety = toIndexScore(scoreMap, anxietyQuestions, anxietyVerbalFromRaw);
+  const burnout = toIndexScore(scoreMap, burnoutQuestions, burnoutVerbalFromRaw);
+  const competence = toIndexScore(scoreMap, competenceQuestions, competenceVerbalFromRaw);
+
+  const emotionalSupportRaw = sumParentRawForDimensions(scoreMap, ["需求", "接纳情绪", "沟通"]);
+  const ruleGuidanceRaw = sumParentRawForDimensions(scoreMap, ["家庭系统", "自律", "自主"]);
+  const parentType = toParentTypeFromWordMatrix(emotionalSupportRaw, ruleGuidanceRaw);
+
   const overallScore = Math.round(
     dimensionScores.reduce((sum, item) => sum + item.parentPercent, 0) / dimensionScores.length,
   );
@@ -124,7 +186,7 @@ export function scoreAssessment(answers: AssessmentAnswer[]): AssessmentReport {
         ]
       : []),
     ...(anxiety.percent > 60
-      ? ["教育焦虑指数偏高，建议在解决孩子问题前，先降低家长自身的紧绷感和无力感。"] 
+      ? ["教育焦虑指数偏高，建议在解决孩子问题前，先降低家长自身的紧绷感和无力感。"]
       : []),
   ];
 
@@ -147,5 +209,11 @@ export function scoreAssessment(answers: AssessmentAnswer[]): AssessmentReport {
     matchAnalysis,
     suggestions,
     courseRecommendations,
+    emotionalSupportRaw,
+    ruleGuidanceRaw,
+    emotionalSupportWordBand: supportGuidanceWordBand045(emotionalSupportRaw),
+    ruleGuidanceWordBand: supportGuidanceWordBand045(ruleGuidanceRaw),
+    competenceClarification: WORD_COMPETENCE_CLARIFICATION,
+    percentConversionNote: WORD_PERCENT_CONVERSION_NOTE,
   };
 }

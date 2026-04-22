@@ -18,14 +18,14 @@ export function DimensionAnalysisGrid({
               <p className="min-w-0 text-sm font-semibold leading-tight text-slate-950 md:text-base break-keep">
                 {dimension.name}
               </p>
-              <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-500">
-                {dimension.level}
+              <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[0.65rem] font-medium text-slate-600">
+                综合：{dimension.level}
               </span>
             </div>
             <div className="mt-5 space-y-4">
               <div>
                 <div className="mb-2 flex items-center justify-between text-sm text-slate-700">
-                  <span>孩子表现</span>
+                  <span>孩子表现（{dimension.childWordBand}）</span>
                   <span className="font-semibold text-emerald-600">{dimension.childPercent}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-slate-200">
@@ -37,7 +37,7 @@ export function DimensionAnalysisGrid({
               </div>
               <div>
                 <div className="mb-2 flex items-center justify-between text-sm text-slate-700">
-                  <span>家长能力</span>
+                  <span>家长能力（{dimension.parentWordBand}）</span>
                   <span className="font-semibold text-indigo-500">{dimension.parentPercent}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-slate-200">

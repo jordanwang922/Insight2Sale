@@ -32,20 +32,16 @@ describe("assessment question bank", () => {
     }
   });
 
-  test("attaches theory, scoring logic and explanation to all questions", () => {
-    const allQuestions = [
-      ...coreQuestions,
-      ...anxietyQuestions,
-      ...burnoutQuestions,
-      ...competenceQuestions,
-    ];
-
-    expect(allQuestions).toHaveLength(45);
-
-    for (const question of allQuestions) {
+  test("attaches Word-sourced theory and scoring logic to core questions; 解析可有可无", () => {
+    expect(coreQuestions).toHaveLength(36);
+    for (const question of coreQuestions) {
       expect(question.theory?.length ?? 0).toBeGreaterThan(0);
       expect(question.scoringLogic?.length ?? 0).toBeGreaterThan(0);
-      expect(question.explanation?.length ?? 0).toBeGreaterThan(0);
+    }
+    const indexQuestions = [...anxietyQuestions, ...burnoutQuestions, ...competenceQuestions];
+    expect(indexQuestions).toHaveLength(9);
+    for (const question of indexQuestions) {
+      expect(question.options).toHaveLength(4);
     }
   });
 });

@@ -100,6 +100,7 @@ export async function submitAssessment(formData: FormData) {
     parentingRole: String(intakeData.parentingRole || ""),
     occupationCategory: String(intakeData.occupationCategory || ""),
     occupationDetail: String(intakeData.occupationDetail || ""),
+    residenceCity: String(intakeData.residenceCity || "").trim(),
     source: template.shortName,
     sourceDetail: template.slug,
     ipLocation: "待补充",
@@ -107,9 +108,11 @@ export async function submitAssessment(formData: FormData) {
     completionSeconds: Number(formData.get("completionSeconds") || 0),
     submittedAt: new Date(),
     coreProblem: String(intakeData.coreProblem || ""),
-    coreConcern: String(intakeData.coreConcern || ""),
+    /** v2 问卷将「难题 + 担心」合并为一题，仅写入 coreProblem */
+    coreConcern: "",
     attemptedActions: String(intakeData.attemptedActions || ""),
-    attemptedOutcome: String(intakeData.attemptedOutcome || ""),
+    /** v2 问卷将「做法 + 效果」合并为一题，仅写入 attemptedActions */
+    attemptedOutcome: "",
     desiredSupport: String(intakeData.desiredSupport || ""),
   };
 

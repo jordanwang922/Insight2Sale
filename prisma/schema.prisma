@@ -80,6 +80,8 @@ model Customer {
   parentingRole            String?
   occupationCategory       String?
   occupationDetail         String?
+  /** 测评采集：家长填写的长期居住城市（与 IP 推断的 ipLocation 区分） */
+  residenceCity            String?
   source                   String?
   sourceDetail             String?
   ipLocation               String?

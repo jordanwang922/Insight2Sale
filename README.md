@@ -90,6 +90,7 @@ npm run start -- --port 3001
 - 设计方案：`docs/design/system-design.md`
 - 开发日志：`docs/logs/development-log.md`
 - 交接日志：`docs/logs/handoff-log.md`
+- **生产服务器部署（路径、迁移、Nginx、PM2）**：`docs/deployment/SERVER_DEPLOYMENT.md`
 
 ## 当前注意事项
 

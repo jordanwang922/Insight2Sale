@@ -193,12 +193,7 @@ async function main() {
       description: "用于家长前端 H5 填写的主推测评，完成后生成双雷达图、家长类型与销售解读报告。",
       introTitle: "家长养育能力与孩子成长潜能匹配度评估",
       introBody: "基于田宏杰《智慧父母科学养育计划》的专业测评工具。",
-      reportOutlineJson: JSON.stringify([
-        "基本信息与测评时间",
-        "孩子与家长 6 维度雷达图",
-        "家长类型判断与特点",
-        "关键问题、课程挂钩与下一步建议",
-      ]),
+      reportOutlineJson: JSON.stringify([]),
       configJson: JSON.stringify({
         runtime: "builtin-parenting-v1",
         questionCount: 45,
@@ -214,12 +209,7 @@ async function main() {
       description: "用于家长前端 H5 填写的主推测评，完成后生成双雷达图、家长类型与销售解读报告。",
       introTitle: "家长养育能力与孩子成长潜能匹配度评估",
       introBody: "基于田宏杰《智慧父母科学养育计划》的专业测评工具。",
-      reportOutlineJson: JSON.stringify([
-        "基本信息与测评时间",
-        "孩子与家长 6 维度雷达图",
-        "家长类型判断与特点",
-        "关键问题、课程挂钩与下一步建议",
-      ]),
+      reportOutlineJson: JSON.stringify([]),
       configJson: JSON.stringify({
         runtime: "builtin-parenting-v1",
         questionCount: 45,

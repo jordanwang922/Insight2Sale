@@ -1,8 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { parseJson } from "@/lib/utils";
-import { RadarChartCard } from "@/components/charts/radar-chart-card";
+import { RadarChartCardDual } from "@/components/charts/radar-chart-card";
 import { DimensionAnalysisGrid } from "@/components/assessment/dimension-analysis-grid";
+import { AssessmentReportSharePanel } from "@/components/assessment/assessment-report-share-panel";
+import { AssessmentReportCourseBlock } from "@/components/assessment/assessment-report-course-block";
+import { AssessmentReportFootnotes } from "@/components/assessment/assessment-report-footnotes";
+import { AssessmentReportIndexCards } from "@/components/assessment/assessment-report-index-cards";
+import { AssessmentReportParentTypeBlock } from "@/components/assessment/assessment-report-parent-type-block";
+import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
 import { AssessmentReport } from "@/features/assessment/types";
 
 type RadarChartDatum = {
@@ -27,7 +33,9 @@ export default async function AssessmentResultPage({
     notFound();
   }
 
-  const report = parseJson<AssessmentReport | null>(submission.reportSnapshot.reportData, null);
+  const report = normalizeAssessmentReport(
+    parseJson<AssessmentReport | null>(submission.reportSnapshot.reportData, null),
+  );
   const parentRadar = parseJson<RadarChartDatum[]>(submission.reportSnapshot.parentRadarData, []);
   const childRadar = parseJson<RadarChartDatum[]>(submission.reportSnapshot.childRadarData, []);
 
@@ -52,25 +60,38 @@ export default async function AssessmentResultPage({
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-2">
-          <RadarChartCard title="孩子 6 维度雷达图" color="#10b981" data={childRadar} />
-          <RadarChartCard title="家长 6 维度雷达图" color="#6366f1" data={parentRadar} />
+        {report ? <AssessmentReportParentTypeBlock report={report} /> : null}
+
+        <section>
+          <RadarChartCardDual
+            title="孩子与家长 6 维度雷达图"
+            childRadar={childRadar}
+            parentRadar={parentRadar}
+          />
         </section>
 
         {report ? <DimensionAnalysisGrid dimensions={report.dimensionScores} /> : null}
 
-        <section className="grid gap-4 lg:grid-cols-3">
-          {[
-            ["教育焦虑指数", report?.anxiety?.percent ?? 0],
-            ["养育倦怠指数", report?.burnout?.percent ?? 0],
-            ["教养能力感", report?.competence?.percent ?? 0],
-          ].map(([label, value]) => (
-            <article key={label} className="rounded-[1.5rem] border border-slate-200 bg-white p-6">
-              <p className="text-sm text-slate-500">{label}</p>
-              <p className="mt-3 text-4xl font-semibold text-slate-950">{value}%</p>
-            </article>
-          ))}
-        </section>
+        {report ? (
+          <section className="rounded-[2rem] border border-violet-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">报告长图</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              生成与下方数据一致的竖版长图，便于保存到相册或分享至微信。
+            </p>
+            <div className="mt-6">
+              <AssessmentReportSharePanel
+                nickname={submission.customer.wechatNickname}
+                report={report}
+                childRadar={childRadar}
+                parentRadar={parentRadar}
+              />
+            </div>
+          </section>
+        ) : null}
+
+        {report ? <AssessmentReportIndexCards report={report} /> : null}
+
+        {report ? <AssessmentReportCourseBlock report={report} /> : null}
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <h2 className="text-2xl font-semibold text-slate-950">系统初步建议</h2>
@@ -83,6 +104,8 @@ export default async function AssessmentResultPage({
             ))}
           </ul>
         </section>
+
+        {report ? <AssessmentReportFootnotes report={report} /> : null}
       </div>
     </main>
   );
