@@ -13,7 +13,7 @@
   - **Word 真源**：`docs/client/智慧父母测评-v2.docx`。题库生成：`npm run assessment:gen-from-docx`；**与仓库一致性校验**：`npm run assessment:verify-word`（失败即 doc 与代码不一致）。
   - **客户表**：`Customer.residenceCity`（迁移 `prisma/migrations/20260422120000_customer_residence_city`）；生产勿忘 **`npx prisma migrate deploy`**。
   - **计分与报告**：`src/features/assessment/scoring.ts`（Word 分档与 9 型矩阵）、`report-normalize.ts`（旧快照兼容）、`report-word-copy.ts`（脚注）；用户结果页 + 长图 + 解读台（SOP 仍为原解读台模版流程）见 `assessment/result/*`、`assessment-report-*`、`customers/[customerId]/page.tsx`。
-  - **部署说明**：**`docs/deployment/SERVER_DEPLOYMENT.md`**（路径示例 `/opt/insight2sale`、迁移、PM2、Nginx、`storage/`）。
+  - **部署说明**：**`docs/deployment/SERVER_DEPLOYMENT.md`**（生产路径 **`/var/www/crm001/Insight2Sale`**、迁移、PM2、Nginx、`storage/`）。
 - **产品定位**：测评 + 销售 CRM（解读台、客户、日历、知识库、**主管视图 + 管理员组织总览**），非单一测评工具。
 - **知识库 RAG 向量**：**火山方舟豆包 Embedding**；向量存 PostgreSQL `KnowledgeChunk.embeddingJson`。须 `ARK_EMBEDDING_MODEL`；多模态 Vision 须 `ARK_EMBEDDING_USE_MULTIMODAL=1`。未配置时降级 `local-hash-v1`。全量重算：`npm run db:reembed-knowledge`。设计见 **`docs/design/system-design.md` §28**。
 - **通话录音（v0.8 延续）**：解读台宽屏录音条 → 豆包语音转写 / 方舟纪要 → `/dashboard/call-recordings`；详见 §11.5、§27。

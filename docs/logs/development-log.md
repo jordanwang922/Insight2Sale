@@ -23,6 +23,10 @@
 
 ## 当前记录
 
+### 2026-04-12 部署文档：生产服务器根路径
+
+- **`docs/deployment/SERVER_DEPLOYMENT.md`**、**`docs/logs/handoff-log.md`** 中示例根路径统一为 **`/var/www/crm001/Insight2Sale`**（与当前生产目录一致）。
+
 ### 2026-04-22 智慧父母测评 v2（Word 对齐）、报告与部署文档
 
 - 本次目标：以 **`docs/client/智慧父母测评-v2.docx`** 为真源对齐采集与题库；报告计分与 Word「三、计分规则」一致；用户端与解读台展示完整报告块；可核对、可部署。

@@ -1,6 +1,6 @@
 # Insight2Sale 服务器部署说明（生产）
 
-本文描述在 **Linux 服务器**（Ubuntu 22.04+ 或同类）上从 **Git `main` 分支**部署本项目的推荐路径与命令。路径以 **`/opt/insight2sale`** 为示例，可按实际替换。
+本文描述在 **Linux 服务器**（Ubuntu 22.04+ 或同类）上从 **Git `main` 分支**部署本项目的推荐路径与命令。**当前生产约定路径**：**`/var/www/crm001/Insight2Sale`**（其他环境请全文替换该前缀）。
 
 ---
 
@@ -19,7 +19,7 @@
 ## 2. 目录与仓库路径（示例）
 
 ```text
-/opt/insight2sale/          # 应用根目录（= 仓库 clone 目录，内含 package.json、prisma/）
+/var/www/crm001/Insight2Sale/   # 应用根目录（= 仓库 clone 目录，内含 package.json、prisma/）
 ├── .env                  # 生产环境变量（勿提交 Git；权限建议 600）
 ├── storage/              # 运行时生成：通话录音、知识库上传等（勿提交 Git；须持久化磁盘或改对象存储）
 │   ├── call-recordings/
@@ -28,12 +28,12 @@
 └── prisma/migrations/    # 迁移 SQL；生产用 migrate deploy 应用
 ```
 
-- **代码路径**：`/opt/insight2sale`（`git clone` 或 CI `rsync` 的目标目录）。
+- **代码路径**：`/var/www/crm001/Insight2Sale`（`git clone` 或 CI `rsync` 的目标目录）。
 - **持久化路径**：与代码同级的 **`storage/`**（已在 `.gitignore` 中忽略）。部署后首次上传录音/知识库前，确保进程用户可写：
 
 ```bash
-sudo mkdir -p /opt/insight2sale/storage/call-recordings /opt/insight2sale/storage/knowledge-base
-sudo chown -R deploy:deploy /opt/insight2sale/storage
+sudo mkdir -p /var/www/crm001/Insight2Sale/storage/call-recordings /var/www/crm001/Insight2Sale/storage/knowledge-base
+sudo chown -R deploy:deploy /var/www/crm001/Insight2Sale/storage
 ```
 
 （`deploy` 替换为运行 Node 的系统用户。）
@@ -42,7 +42,7 @@ sudo chown -R deploy:deploy /opt/insight2sale/storage
 
 ## 3. 环境变量（`.env`）
 
-在 **`/opt/insight2sale/.env`** 配置，至少包含（详见仓库根目录 **`.env.example`**）：
+在 **`/var/www/crm001/Insight2Sale/.env`** 配置，至少包含（详见仓库根目录 **`.env.example`**）：
 
 - **`DATABASE_URL`**：生产 PostgreSQL 连接串（含库名、schema）。
 - **`AUTH_SECRET`**：随机长串。
@@ -60,7 +60,7 @@ sudo chown -R deploy:deploy /opt/insight2sale/storage
 在服务器以部署用户登录，进入应用目录：
 
 ```bash
-cd /opt/insight2sale
+cd /var/www/crm001/Insight2Sale
 git fetch origin && git checkout main && git pull origin main
 ```
 
@@ -94,7 +94,7 @@ npm run build
 npm run start -- --port 3001 --hostname 127.0.0.1
 ```
 
-建议使用 **PM2** 常驻（在 `/opt/insight2sale` 下）：
+建议使用 **PM2** 常驻（在 `/var/www/crm001/Insight2Sale` 下）：
 
 ```bash
 pm2 start npm --name insight2sale -- run start -- --port 3001 --hostname 127.0.0.1
@@ -155,7 +155,7 @@ server {
 ## 7. 升级发布（小版本）
 
 ```bash
-cd /opt/insight2sale
+cd /var/www/crm001/Insight2Sale
 git pull origin main
 npm ci
 npx prisma migrate deploy
