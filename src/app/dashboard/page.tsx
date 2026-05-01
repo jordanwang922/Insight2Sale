@@ -17,8 +17,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-[2rem] bg-slate-950 px-6 py-7 text-white shadow-[0_30px_90px_rgba(15,23,42,0.28)]">
+      <section className="grid items-start gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <div className="rounded-[2rem] bg-slate-950 px-6 py-7 text-white shadow-[0_30px_90px_rgba(15,23,42,0.28)] xl:min-h-[20rem]">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-300">
             今日工作总览
           </p>
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">
             今日预约
           </p>
-          <div className="mt-4 space-y-4">
+          <div className="mt-4 max-h-[31rem] space-y-4 overflow-y-auto pr-1">
             {data.appointments.length ? (
               data.appointments.map((appointment) => (
                 <div key={appointment.id} className="rounded-2xl bg-slate-50 px-4 py-3">
@@ -67,10 +67,9 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {data.statusCounts
           .filter((status) => status.count > 0)
-          .slice(0, 4)
           .map((status) => (
             <article
               key={status.id}

@@ -6,6 +6,7 @@ import {
   updateAppointment,
 } from "@/server/actions/appointments";
 import { getCalendarView } from "@/features/crm/queries";
+import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 
 export default async function CalendarPage({
   searchParams,
@@ -111,7 +112,11 @@ export default async function CalendarPage({
         >
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">新增预约</p>
           <h2 className="mt-3 text-2xl font-semibold text-slate-950">{data.selectedDate} 日程安排</h2>
-          <form action={selectedAppointment ? updateAppointment : createAppointment} className="mt-5 space-y-3">
+          <ActionFeedbackForm
+            action={selectedAppointment ? updateAppointment : createAppointment}
+            className="mt-5"
+            successMessage={selectedAppointment ? "预约修改已保存。" : "预约已保存。"}
+          >
             {selectedAppointment ? <input type="hidden" name="id" value={selectedAppointment.id} /> : null}
             <label className="block space-y-2 text-sm font-medium text-slate-900">
               指派给谁
@@ -182,14 +187,14 @@ export default async function CalendarPage({
                 {selectedAppointment ? "保存修改" : "保存预约"}
               </button>
             </div>
-          </form>
+          </ActionFeedbackForm>
           {selectedAppointment ? (
-            <form action={deleteAppointment} className="mt-3">
+            <ActionFeedbackForm action={deleteAppointment} className="mt-3" successMessage="预约已删除。">
               <input type="hidden" name="id" value={selectedAppointment.id} />
               <button className="w-full rounded-2xl border border-rose-300 px-4 py-3 text-sm font-semibold text-rose-700">
                 删除预约
               </button>
-            </form>
+            </ActionFeedbackForm>
           ) : null}
         </article>
       </section>

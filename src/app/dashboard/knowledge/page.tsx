@@ -3,9 +3,7 @@ import { redirect } from "next/navigation";
 import { categoryDescriptions, knowledgeCategories } from "@/features/knowledge/categories";
 import { slugFromCategory } from "@/features/knowledge/category-slugs";
 import { getKnowledgeOverview, requireManagerSession } from "@/features/crm/queries";
-import { updateKnowledgeDocumentState } from "@/server/actions/knowledge";
 import { KnowledgeIngestForm } from "@/components/knowledge/knowledge-ingest-form";
-import { parseJson } from "@/lib/utils";
 
 export default async function KnowledgePage({
   searchParams,
@@ -68,7 +66,7 @@ export default async function KnowledgePage({
         })}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid gap-4">
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">新增知识</p>
           {uploadError ? (
@@ -124,118 +122,6 @@ export default async function KnowledgePage({
           </p>
         </article>
 
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">检索与状态</p>
-          <form className="mt-5 grid gap-3 md:grid-cols-[1fr_220px_auto]">
-            <input
-              className="rounded-2xl border border-slate-200 px-4 py-3"
-              defaultValue={data.q}
-              name="q"
-              placeholder="搜索标题、正文或关键术语"
-            />
-            <select className="rounded-2xl border border-slate-200 px-4 py-3" defaultValue={data.category} name="category">
-              <option value="">全部分类</option>
-              {knowledgeCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-            <button className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700">
-              搜索
-            </button>
-          </form>
-
-          <div className="mt-6 space-y-4">
-            {data.documents.length ? (
-              data.documents.map((document) => {
-                const tags = parseJson<string[]>(document.tagsJson, []);
-                const metadata = parseJson<{ chunkCount?: number; embeddingModel?: string }>(
-                  document.metadataJson,
-                  {},
-                );
-
-                return (
-                  <div key={document.id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link
-                            className="text-lg font-semibold text-slate-950 hover:text-amber-800 hover:underline"
-                            href={`/dashboard/knowledge/document/${document.id}/edit`}
-                          >
-                            {document.title}
-                          </Link>
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
-                            {document.category}
-                          </span>
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
-                            {document.sourceType}
-                          </span>
-                        </div>
-                        <p className="mt-3 text-sm leading-7 text-slate-600">
-                          {document.summary?.trim() ? document.summary : "暂无摘要"}
-                        </p>
-                        {document.assessmentTemplate ? (
-                          <p className="mt-3 text-xs text-amber-700">
-                            关联测评：{document.assessmentTemplate.title}
-                          </p>
-                        ) : null}
-                        {tags.length ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {tags.map((tag) => (
-                              <span key={tag} className="rounded-full bg-white px-3 py-1 text-xs text-slate-500">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        <p className="mt-3 text-xs text-slate-400">
-                          切片数：{metadata.chunkCount ?? document.chunks.length} · 向量模型：
-                          {metadata.embeddingModel ?? "local-hash-v1"} · 创建人：
-                          {document.createdBy?.name ?? "系统"}
-                        </p>
-                      </div>
-                      <form
-                        action={updateKnowledgeDocumentState}
-                        className="flex shrink-0 flex-row flex-nowrap items-center gap-2 md:gap-3 md:self-start"
-                      >
-                        <input name="id" type="hidden" value={document.id} />
-                        <label className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-slate-600">
-                          <input defaultChecked={document.enabled} name="enabled" type="checkbox" />
-                          启用
-                        </label>
-                        <button
-                          type="submit"
-                          className="shrink-0 whitespace-nowrap rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-                        >
-                          保存
-                        </button>
-                      </form>
-                    </div>
-
-                    {document.chunks.length ? (
-                      <div className="mt-4 grid gap-3">
-                        {document.chunks.map((chunk) => (
-                          <div key={chunk.id} className="rounded-2xl bg-white px-4 py-4 text-sm leading-7 text-slate-600">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                              Chunk {chunk.chunkIndex + 1}
-                            </p>
-                            {chunk.content}
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })
-            ) : (
-              <p className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500">
-                当前还没有知识条目，先上传一份课程、话术或测评解读资料。
-              </p>
-            )}
-          </div>
-        </article>
       </section>
     </div>
   );

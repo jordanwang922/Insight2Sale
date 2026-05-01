@@ -11,6 +11,7 @@ const allQuestions = [...coreQuestions, ...anxietyQuestions, ...burnoutQuestions
 export function AssessmentForm({ templateSlug }: { templateSlug?: string }) {
   const [step, setStep] = useState<"intake" | "questions">("intake");
   const [selected, setSelected] = useState<Record<number, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [startedAt] = useState(() => Date.now());
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -135,13 +136,14 @@ export function AssessmentForm({ templateSlug }: { templateSlug?: string }) {
                           : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-400"
                       }`}
                     >
-                      <input
+                  <input
                         checked={checked}
                         className="mt-1"
                         name={`q_${question.id}`}
-                        onChange={() =>
-                          setSelected((current) => ({ ...current, [question.id]: option.label }))
-                        }
+                        onChange={() => {
+                          setSelected((current) => ({ ...current, [question.id]: option.label }));
+                          setSubmitError(null);
+                        }}
                         type="radio"
                         value={JSON.stringify({ label: option.label, score: option.score })}
                       />
@@ -153,8 +155,21 @@ export function AssessmentForm({ templateSlug }: { templateSlug?: string }) {
             </article>
           ))}
 
+          {submitError ? (
+            <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-7 text-rose-700">
+              {submitError}
+            </p>
+          ) : null}
+
           <button
             className="w-full rounded-full bg-slate-950 px-6 py-4 text-sm font-semibold text-white"
+            onClick={(event) => {
+              const answered = Object.keys(selected).length;
+              if (answered !== allQuestions.length) {
+                event.preventDefault();
+                setSubmitError(`测评题目还没有答完：已答 ${answered} / ${allQuestions.length} 题。`);
+              }
+            }}
             type="submit"
           >
             提交并生成测评报告

@@ -3,6 +3,8 @@ import { getDashboardSummary } from "@/features/crm/queries";
 import { parseJson } from "@/lib/utils";
 import { isAdminRole, isManagerOrAdmin } from "@/lib/role-access";
 import { assignCustomerOwner } from "@/server/actions/customer";
+import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
+import type { AssessmentReport } from "@/features/assessment/types";
 
 export default async function CustomersPage({
   searchParams,
@@ -64,9 +66,11 @@ export default async function CustomersPage({
       <div className="mt-8 md:hidden">
         <div className="space-y-4">
           {customers.map((customer) => {
-            const latestReport = customer.reports[0]
-              ? parseJson<{ parentType?: { name?: string } } | null>(customer.reports[0].reportData, null)
-              : null;
+            const latestReport = normalizeAssessmentReport(
+              customer.reports[0]
+                ? parseJson<AssessmentReport | null>(customer.reports[0].reportData, null)
+                : null,
+            );
 
             return (
               <div
@@ -185,9 +189,11 @@ export default async function CustomersPage({
         </div>
         <div className="divide-y divide-slate-100">
           {customers.map((customer) => {
-            const latestReport = customer.reports[0]
-              ? parseJson<{ parentType?: { name?: string } } | null>(customer.reports[0].reportData, null)
-              : null;
+            const latestReport = normalizeAssessmentReport(
+              customer.reports[0]
+                ? parseJson<AssessmentReport | null>(customer.reports[0].reportData, null)
+                : null,
+            );
 
             return (
               <div

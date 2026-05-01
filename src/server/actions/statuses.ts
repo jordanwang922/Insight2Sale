@@ -65,6 +65,11 @@ export async function updateCustomerStatus(formData: FormData) {
 
   const { session, customer } = await requireCustomerAccess(customerId);
 
+  if (customer?.currentStatusId === toStatusId) {
+    revalidatePath(`/dashboard/customers/${customerId}`);
+    return;
+  }
+
   await prisma.customer.update({
     where: { id: customerId },
     data: { currentStatusId: toStatusId },

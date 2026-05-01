@@ -4,10 +4,9 @@ import { useCallback, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import type { AssessmentReport } from "@/features/assessment/types";
 import { RadarChartCardDual } from "@/components/charts/radar-chart-card";
-import { AssessmentReportCourseBlock } from "@/components/assessment/assessment-report-course-block";
-import { AssessmentReportFootnotes } from "@/components/assessment/assessment-report-footnotes";
 import { AssessmentReportIndexCards } from "@/components/assessment/assessment-report-index-cards";
 import { AssessmentReportParentTypeBlock } from "@/components/assessment/assessment-report-parent-type-block";
+import type { AssessmentReportPracticeSection } from "@/components/assessment/assessment-report-practice-sections";
 
 type RadarDatum = { dimension: string; score: number; fullMark: number };
 
@@ -18,6 +17,8 @@ export interface AssessmentReportSharePanelProps {
   parentRadar: RadarDatum[];
   /** 下载文件名前缀（不含扩展名） */
   fileNameBase?: string;
+  parentTypeSummary?: string | null;
+  parentTypePracticeSections?: AssessmentReportPracticeSection[];
 }
 
 export function AssessmentReportSharePanel({
@@ -26,6 +27,8 @@ export function AssessmentReportSharePanel({
   childRadar,
   parentRadar,
   fileNameBase = "智慧父母测评报告",
+  parentTypeSummary,
+  parentTypePracticeSections = [],
 }: AssessmentReportSharePanelProps) {
   const captureRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -110,7 +113,13 @@ export function AssessmentReportSharePanel({
             </div>
           </header>
 
-          <AssessmentReportParentTypeBlock forSharePng report={report} variant="dark" />
+          <AssessmentReportParentTypeBlock
+            forSharePng
+            practiceSections={parentTypePracticeSections}
+            report={report}
+            summary={parentTypeSummary}
+            variant="dark"
+          />
 
           <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
             <RadarChartCardDual
@@ -119,7 +128,7 @@ export function AssessmentReportSharePanel({
               parentRadar={parentRadar}
               compact
               forSharePng
-              className="border-white/15 bg-slate-950/90"
+              className="aspect-square border-white/15 bg-slate-950/90"
             />
           </div>
 
@@ -142,27 +151,12 @@ export function AssessmentReportSharePanel({
 
           <AssessmentReportIndexCards forSharePng report={report} variant="dark" />
 
-          <section className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-            <p className="text-sm font-semibold text-amber-200">匹配度解读</p>
-            <p className="mt-3 text-sm leading-relaxed text-white/92 whitespace-pre-line">{report.matchAnalysis}</p>
-          </section>
-
-          <section className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-            <p className="text-sm font-semibold text-amber-200">成长建议</p>
-            <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-white/90">
-              {report.suggestions.map((s) => (
-                <li key={s} className="rounded-lg bg-black/20 px-3 py-2.5">
-                  {s}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-            <AssessmentReportCourseBlock forSharePng report={report} variant="dark" />
-          </div>
-
-          <AssessmentReportFootnotes forSharePng report={report} variant="dark" />
+          {!parentTypePracticeSections.length ? (
+            <section className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+              <p className="text-sm font-semibold text-amber-200">匹配度解读</p>
+              <p className="mt-3 text-sm leading-relaxed text-white/92 whitespace-pre-line">{report.matchAnalysis}</p>
+            </section>
+          ) : null}
 
           <footer className="border-t border-white/10 pt-4 text-center text-xs leading-relaxed text-white/55">
             本报告由智慧父母养育测评系统自动生成，具体解读以顾问沟通为准。

@@ -22,9 +22,18 @@ function enrichQuestion<T extends { id: number }>(question: T) {
 export { dimensionDefinitions, parentTypeDefinitions };
 
 export const coreQuestions = rawCoreQuestions.map(enrichQuestion);
-export const anxietyQuestions = rawAnxietyQuestions.map(enrichQuestion);
-export const burnoutQuestions = rawBurnoutQuestions.map(enrichQuestion);
-export const competenceQuestions = rawCompetenceQuestions.map(enrichQuestion);
+export const anxietyQuestions = rawAnxietyQuestions.map((question) => ({
+  ...enrichQuestion(question),
+  dimension: "家长的教育焦虑指数",
+}));
+export const burnoutQuestions = rawBurnoutQuestions.map((question) => ({
+  ...enrichQuestion(question),
+  dimension: "家长的教育倦怠指数",
+}));
+export const competenceQuestions = rawCompetenceQuestions.map((question) => ({
+  ...enrichQuestion(question),
+  dimension: "家长的教养能力感",
+}));
 
 /** 用户端测评说明等处使用的总题数（与题库一致） */
 export const assessmentTotalQuestionCount =

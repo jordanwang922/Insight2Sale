@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { parseJson } from "@/lib/utils";
 import { toRadarData } from "@/features/assessment/report";
 import { AssessmentReport } from "@/features/assessment/types";
+import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
 import { buildMonthCalendar } from "@/features/crm/calendar";
 import { buildKbWorkspaceInterpretation } from "@/features/knowledge/interpretation-lookup";
 import {
@@ -97,6 +98,13 @@ export async function getDashboardSummary() {
   ]);
   const customerIds = customers.map((c) => c.id);
   const nicknames = customers.map((c) => c.wechatNickname);
+  const statusTransitions =
+    customerIds.length === 0
+      ? []
+      : await prisma.statusTransition.findMany({
+          where: { customerId: { in: customerIds } },
+          select: { customerId: true, toStatusId: true },
+        });
 
   /** 客户列表「下次预约」：优先未开始的最早一条；若均已过期则显示最近一次已排期（避免误以为未预约） */
   const appointmentsForCustomerList =
@@ -141,9 +149,22 @@ export async function getDashboardSummary() {
     }
   }
 
+  const reachedStatusCustomerIds = new Map<string, Set<string>>();
+  for (const status of statuses) {
+    reachedStatusCustomerIds.set(status.id, new Set());
+  }
+  for (const customer of customers) {
+    if (customer.currentStatusId) {
+      reachedStatusCustomerIds.get(customer.currentStatusId)?.add(customer.id);
+    }
+  }
+  for (const transition of statusTransitions) {
+    reachedStatusCustomerIds.get(transition.toStatusId)?.add(transition.customerId);
+  }
+
   const statusCounts = statuses.map((status) => ({
     ...status,
-    count: customers.filter((customer) => customer.currentStatusId === status.id).length,
+    count: reachedStatusCustomerIds.get(status.id)?.size ?? 0,
   }));
 
   return {
@@ -162,34 +183,44 @@ export async function getDashboardSummary() {
   };
 }
 
-export async function getCustomerWorkspace(customerId: string) {
+export async function getCustomerWorkspace(
+  customerId: string,
+  options: { statusTransitionPage?: number; statusTransitionPageSize?: number } = {},
+) {
   const session = await requireSession();
   if (!session?.user?.id) return null;
+  const statusTransitionPageSize = Math.max(1, Math.min(20, options.statusTransitionPageSize ?? 6));
+  const statusTransitionPage = Math.max(1, options.statusTransitionPage ?? 1);
+  const statusTransitionSkip = (statusTransitionPage - 1) * statusTransitionPageSize;
 
-  const customer = await prisma.customer.findUnique({
-    where: { id: customerId },
-    include: {
-      owner: true,
-      currentStatus: true,
-      reports: { orderBy: { createdAt: "desc" }, take: 1 },
-      followUps: { orderBy: { createdAt: "desc" }, include: { author: true } },
-      appointments: { orderBy: { startAt: "asc" }, include: { owner: true } },
-      statusTransitions: {
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        include: { fromStatus: true, toStatus: true },
+  const [customer, statusTransitionTotal] = await Promise.all([
+    prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        owner: true,
+        currentStatus: true,
+        reports: { orderBy: { createdAt: "desc" }, take: 1 },
+        followUps: { orderBy: { createdAt: "desc" }, include: { author: true } },
+        appointments: { orderBy: { startAt: "asc" }, include: { owner: true } },
+        statusTransitions: {
+          orderBy: { createdAt: "desc" },
+          skip: statusTransitionSkip,
+          take: statusTransitionPageSize,
+          include: { fromStatus: true, toStatus: true },
+        },
+        supplementalScripts: {
+          orderBy: { createdAt: "desc" },
+          include: { author: true },
+        },
+        assessments: {
+          orderBy: { submittedAt: "desc" },
+          take: 1,
+          include: { template: true },
+        },
       },
-      supplementalScripts: {
-        orderBy: { createdAt: "desc" },
-        include: { author: true },
-      },
-      assessments: {
-        orderBy: { submittedAt: "desc" },
-        take: 1,
-        include: { template: true },
-      },
-    },
-  });
+    }),
+    prisma.statusTransition.count({ where: { customerId } }),
+  ]);
 
   if (!customer) return null;
   if (!isManagerOrAdmin(session.user.role) && customer.ownerId !== session.user.id) {
@@ -197,13 +228,15 @@ export async function getCustomerWorkspace(customerId: string) {
   }
 
   const report = customer.reports[0];
-  const reportData = report
-    ? parseJson<
-        AssessmentReport & {
-          salesSummary?: { headline: string; weakestDimension: string; riskSignal: string };
-        } | null
-      >(report.reportData, null)
-    : null;
+  const reportData = normalizeAssessmentReport(
+    report
+      ? parseJson<
+          AssessmentReport & {
+            salesSummary?: { headline: string; weakestDimension: string; riskSignal: string };
+          } | null
+        >(report.reportData, null)
+      : null,
+  );
   const parentRadar = report
     ? parseJson<Array<{ dimension: string; score: number; fullMark: number }>>(report.parentRadarData, [])
     : [];
@@ -284,6 +317,12 @@ export async function getCustomerWorkspace(customerId: string) {
   return {
     session,
     customer,
+    statusTransitionsPagination: {
+      page: statusTransitionPage,
+      pageSize: statusTransitionPageSize,
+      total: statusTransitionTotal,
+      pageCount: Math.max(1, Math.ceil(statusTransitionTotal / statusTransitionPageSize)),
+    },
     reportData,
     parentRadar:
       parentRadar.length && reportData

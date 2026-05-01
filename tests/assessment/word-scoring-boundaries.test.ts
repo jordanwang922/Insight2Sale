@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { scoreAssessment } from "@/features/assessment/scoring";
 import { anxietyQuestions, burnoutQuestions, competenceQuestions, coreQuestions } from "@/features/assessment/questions";
+import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
 
 function buildAnswers(
   coreFactory: (q: (typeof coreQuestions)[0]) => { label: string; score: number },
@@ -67,5 +68,70 @@ describe("Word 文档分档边界（与 scoring.ts 一致）", () => {
     const rHi = scoreAssessment(buildAnswers(parentMax, z, z, z));
     expect(rHi.emotionalSupportRaw).toBe(45);
     expect(rHi.emotionalSupportWordBand).toBe("优势");
+  });
+
+  test("家长 9 型矩阵按情感支持度 x 规则引导度映射", () => {
+    const byParentDimensionScore = (scoreByDimension: Record<string, number>) =>
+      buildAnswers(
+        (q) => {
+          if (q.type !== "parent") return { label: q.options[0]!.label, score: q.options[0]!.score };
+          const score = scoreByDimension[q.dimension] ?? 0;
+          const opt = q.options.find((o) => o.score === score) ?? q.options[0]!;
+          return { label: opt.label, score };
+        },
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+      );
+
+    const cases: Array<[string, Record<string, number>, string]> = [
+      ["高支持高规则", { 需求: 5, 接纳情绪: 5, 沟通: 5, 家庭系统: 5, 自律: 5, 自主: 5 }, "权威型"],
+      ["中支持高规则", { 需求: 3, 接纳情绪: 3, 沟通: 3, 家庭系统: 5, 自律: 5, 自主: 5 }, "温和管控型"],
+      ["低支持高规则", { 需求: 1, 接纳情绪: 1, 沟通: 1, 家庭系统: 5, 自律: 5, 自主: 5 }, "独裁型"],
+      ["高支持中规则", { 需求: 5, 接纳情绪: 5, 沟通: 5, 家庭系统: 3, 自律: 3, 自主: 3 }, "爱心管家型"],
+      ["中支持中规则", { 需求: 3, 接纳情绪: 3, 沟通: 3, 家庭系统: 3, 自律: 3, 自主: 3 }, "温柔引导型"],
+      ["低支持中规则", { 需求: 1, 接纳情绪: 1, 沟通: 1, 家庭系统: 3, 自律: 3, 自主: 3 }, "冷静管理型"],
+      ["高支持低规则", { 需求: 5, 接纳情绪: 5, 沟通: 5, 家庭系统: 1, 自律: 1, 自主: 1 }, "放任型"],
+      ["中支持低规则", { 需求: 3, 接纳情绪: 3, 沟通: 3, 家庭系统: 1, 自律: 1, 自主: 1 }, "温情弹性型"],
+      ["低支持低规则", { 需求: 1, 接纳情绪: 1, 沟通: 1, 家庭系统: 1, 自律: 1, 自主: 1 }, "忽视型"],
+    ];
+
+    for (const [label, scoreByDimension, expected] of cases) {
+      expect(scoreAssessment(byParentDimensionScore(scoreByDimension)).parentType.name, label).toBe(expected);
+    }
+  });
+
+  test("三指数百分制显示用 0-15 原始分映射到指定文案", () => {
+    const z = [0, 0, 0] as [number, number, number];
+    const r = scoreAssessment(buildAnswers(maxOpt, [3, 3, 3], [3, 3, 3], [3, 3, 3]));
+    expect(r.anxiety).toMatchObject({ score: 9, percent: 60, verbalBand: "很焦虑" });
+    expect(r.burnout).toMatchObject({ score: 9, percent: 60, verbalBand: "很疲惫" });
+    expect(r.competence).toMatchObject({ score: 9, percent: 60, verbalBand: "能力强" });
+
+    const low = scoreAssessment(buildAnswers(maxOpt, z, z, z));
+    expect(low.competence.verbalBand).toBe("能力弱");
+  });
+
+  test("历史快照 normalize 时按新 9 型矩阵重算展示类型", () => {
+    const report = scoreAssessment(
+      buildAnswers(
+        (q) => {
+          if (q.type !== "parent") return { label: q.options[0]!.label, score: q.options[0]!.score };
+          const score = ["需求", "接纳情绪", "沟通"].includes(q.dimension) ? 3 : 5;
+          const opt = q.options.find((o) => o.score === score) ?? q.options[0]!;
+          return { label: opt.label, score };
+        },
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+      ),
+    );
+    const normalized = normalizeAssessmentReport({
+      ...report,
+      parentType: { ...report.parentType, name: "爱心管家型" },
+    });
+    expect(normalized?.emotionalSupportRaw).toBe(27);
+    expect(normalized?.ruleGuidanceRaw).toBe(45);
+    expect(normalized?.parentType.name).toBe("温和管控型");
   });
 });

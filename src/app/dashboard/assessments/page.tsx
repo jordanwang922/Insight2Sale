@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createAssessmentTemplate, updateAssessmentTemplate } from "@/server/actions/assessments";
 import { getAssessmentManagementData, requireManagerSession } from "@/features/crm/queries";
+import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 
 export default async function AssessmentsPage() {
   const session = await requireManagerSession();
@@ -24,7 +25,7 @@ export default async function AssessmentsPage() {
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">新增测评表</p>
-          <form action={createAssessmentTemplate} className="mt-5 space-y-3">
+          <ActionFeedbackForm action={createAssessmentTemplate} className="mt-5" successMessage="测评模板已保存。">
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="title" placeholder="测评名称，例如：智慧父母养育测评" />
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="shortName" placeholder="短名称，用于销售入口按钮" />
             <textarea className="min-h-24 w-full rounded-2xl border border-slate-200 px-4 py-3" name="description" placeholder="测评简介和适用场景" />
@@ -51,14 +52,19 @@ export default async function AssessmentsPage() {
             <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
               保存测评模板
             </button>
-          </form>
+          </ActionFeedbackForm>
         </article>
 
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">已有测评表</p>
           <div className="mt-5 space-y-4">
             {data.templates.map((template) => (
-              <form key={template.id} action={updateAssessmentTemplate} className="rounded-[1.5rem] bg-slate-50 p-5">
+              <ActionFeedbackForm
+                key={template.id}
+                action={updateAssessmentTemplate}
+                className="rounded-[1.5rem] bg-slate-50 p-5"
+                successMessage="测评配置已保存。"
+              >
                 <input name="id" type="hidden" value={template.id} />
                 <div className="grid gap-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -91,7 +97,7 @@ export default async function AssessmentsPage() {
                     保存测评配置
                   </button>
                 </div>
-              </form>
+              </ActionFeedbackForm>
             ))}
           </div>
         </article>

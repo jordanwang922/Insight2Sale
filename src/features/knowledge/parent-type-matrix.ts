@@ -61,7 +61,6 @@ function findTypeColumnIndex(headerRow: string[], typeName: string): number {
 export function extractParentTypeColumnFromMatrix(
   matrix: string[][],
   typeName: string,
-  _sheetLabel?: string,
 ): string | null {
   if (!matrix.length) return null;
   const headerRowIdx = findHeaderRowIndex(matrix);
@@ -83,6 +82,40 @@ export function extractParentTypeColumnFromMatrix(
   }
   const text = sections.join("\n\n").trim();
   return text.length >= 6 ? text : null;
+}
+
+function rowLabelMatches(label: string, wanted: string): boolean {
+  const n = norm(label);
+  const w = norm(wanted);
+  if (!n || !w) return false;
+  return n === w || n.includes(w) || w.includes(n);
+}
+
+/**
+ * 从矩阵中仅取当前养育类型列下指定行标签的单元格。
+ * 用于报告页精确展示「一句话总结 / 关键提醒 / 修炼品质」，避免整列长文混入匹配度分析等旧块。
+ */
+export function extractParentTypeRowsFromMatrix(
+  matrix: string[][],
+  typeName: string,
+  rowLabels: readonly string[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!matrix.length || !rowLabels.length) return out;
+  const headerRowIdx = findHeaderRowIndex(matrix);
+  const headerRow = matrix[headerRowIdx] ?? [];
+  const colIdx = findTypeColumnIndex(headerRow, typeName);
+  if (colIdx < 0) return out;
+
+  for (let r = headerRowIdx + 1; r < matrix.length; r++) {
+    const row = matrix[r];
+    const label = String(row?.[0] ?? "").trim();
+    const cell = String(row?.[colIdx] ?? "").trim();
+    if (!label || !cell) continue;
+    const wanted = rowLabels.find((item) => out[item] == null && rowLabelMatches(label, item));
+    if (wanted) out[wanted] = cell;
+  }
+  return out;
 }
 
 /** 行标签是否像「隐性风险」类（只匹配首列，避免与其它行混淆） */
@@ -154,6 +187,33 @@ export async function extractCallModeMatrixSnippetsFromXlsxFile(
   return { risk, reminder };
 }
 
+/** 从磁盘 Excel 原文件按当前类型列抽取指定行标签 */
+export async function extractParentTypeRowsFromXlsxFile(
+  filePath: string,
+  typeName: string,
+  rowLabels: readonly string[],
+): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  try {
+    const buffer = await readFile(filePath);
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      if (!sheet) continue;
+      const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" }) as string[][];
+      const rows = extractParentTypeRowsFromMatrix(matrix, typeName, rowLabels);
+      for (const label of rowLabels) {
+        if (!out[label] && rows[label]) out[label] = rows[label];
+      }
+      if (rowLabels.every((label) => out[label])) break;
+    }
+  } catch {
+    /* empty */
+  }
+  return out;
+}
+
 /** 从入库 rawText（工作表 CSV 块）解析矩阵并抽取通话模式用单元格 */
 export async function extractCallModeMatrixSnippetsFromStoredExcelRawText(
   rawText: string,
@@ -215,6 +275,69 @@ export async function extractCallModeMatrixSnippetsFromStoredExcelRawText(
   return { risk, reminder };
 }
 
+/** 从入库 rawText（工作表 CSV 块）按当前类型列抽取指定行标签 */
+export async function extractParentTypeRowsFromStoredExcelRawText(
+  rawText: string,
+  typeName: string,
+  rowLabels: readonly string[],
+): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  const XLSX = await import("xlsx");
+
+  let pos = 0;
+  while (pos < rawText.length) {
+    const mark = rawText.indexOf("---", pos);
+    if (mark < 0) break;
+    const headerMatch = /^---\s*工作表[：:]\s*([^\n]+)\s*---/.exec(rawText.slice(mark));
+    if (!headerMatch) {
+      pos = mark + 3;
+      continue;
+    }
+    const afterHeader = mark + headerMatch[0].length;
+    const nextMark = rawText.indexOf("---", afterHeader);
+    const csvBody = (nextMark < 0 ? rawText.slice(afterHeader) : rawText.slice(afterHeader, nextMark)).trim();
+    pos = nextMark >= 0 ? nextMark : rawText.length;
+
+    if (!csvBody) continue;
+    try {
+      const wb = XLSX.read(csvBody, { type: "string" });
+      const sn = wb.SheetNames[0];
+      if (!sn) continue;
+      const sheet = wb.Sheets[sn];
+      if (!sheet) continue;
+      const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" }) as string[][];
+      const rows = extractParentTypeRowsFromMatrix(matrix, typeName, rowLabels);
+      for (const label of rowLabels) {
+        if (!out[label] && rows[label]) out[label] = rows[label];
+      }
+      if (rowLabels.every((label) => out[label])) break;
+    } catch {
+      /* empty */
+    }
+  }
+
+  if (!rowLabels.every((label) => out[label]) && !rawText.includes("工作表")) {
+    try {
+      const wb = XLSX.read(rawText.trim(), { type: "string" });
+      const sn = wb.SheetNames[0];
+      if (sn) {
+        const sheet = wb.Sheets[sn];
+        if (sheet) {
+          const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" }) as string[][];
+          const rows = extractParentTypeRowsFromMatrix(matrix, typeName, rowLabels);
+          for (const label of rowLabels) {
+            if (!out[label] && rows[label]) out[label] = rows[label];
+          }
+        }
+      }
+    } catch {
+      /* empty */
+    }
+  }
+
+  return out;
+}
+
 /** 从磁盘上的 Excel 原文件按列抽取（保持矩阵结构，不混其它类型列） */
 export async function extractParentTypeSnippetFromXlsxFile(
   filePath: string,
@@ -229,7 +352,7 @@ export async function extractParentTypeSnippetFromXlsxFile(
       const sheet = workbook.Sheets[sheetName];
       if (!sheet) continue;
       const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" }) as string[][];
-      const block = extractParentTypeColumnFromMatrix(matrix, typeName, sheetName);
+      const block = extractParentTypeColumnFromMatrix(matrix, typeName);
       if (block) parts.push(block);
     }
     return parts.length ? parts.join("\n\n") : null;
@@ -257,7 +380,6 @@ export async function extractParentTypeSnippetFromStoredExcelRawText(
       pos = mark + 3;
       continue;
     }
-    const sheetLabel = (headerMatch[1] ?? "").trim();
     const afterHeader = mark + headerMatch[0].length;
     const nextMark = rawText.indexOf("---", afterHeader);
     const csvBody = (nextMark < 0 ? rawText.slice(afterHeader) : rawText.slice(afterHeader, nextMark)).trim();

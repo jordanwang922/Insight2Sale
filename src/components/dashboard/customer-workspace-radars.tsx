@@ -25,6 +25,7 @@ export function CustomerWorkspaceRadars({
   const [mounted, setMounted] = useState(false);
   const [docked, setDocked] = useState(false);
   const [dockBox, setDockBox] = useState({ left: 16, width: 240 });
+  const [hasPassedInlineRadar, setHasPassedInlineRadar] = useState(false);
 
   const updateDockPosition = useCallback(() => {
     const xl = window.matchMedia("(min-width: 1280px)").matches;
@@ -32,9 +33,9 @@ export function CustomerWorkspaceRadars({
     if (xl && aside && aside.offsetWidth > 0) {
       const r = aside.getBoundingClientRect();
       const pad = 6;
-      setDockBox({ left: r.left + pad, width: Math.max(230, Math.min(310, r.width - pad * 2)) });
+      setDockBox({ left: r.left + pad, width: Math.max(190, Math.min(230, r.width - pad * 2)) });
     } else {
-      const w = Math.min(280, Math.max(220, Math.floor(window.innerWidth * 0.52)));
+      const w = Math.min(230, Math.max(190, Math.floor(window.innerWidth * 0.44)));
       setDockBox({ left: 16, width: w });
     }
   }, []);
@@ -54,7 +55,9 @@ export function CustomerWorkspaceRadars({
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
-        setDocked(!entry.isIntersecting);
+        const passed = entry.boundingClientRect.bottom <= 0;
+        setHasPassedInlineRadar((current) => current || passed);
+        setDocked(!entry.isIntersecting && passed);
       },
       { root: null, threshold: 0, rootMargin: "0px 0px 0px 0px" },
     );
@@ -69,6 +72,7 @@ export function CustomerWorkspaceRadars({
   const dock =
     mounted &&
     docked &&
+    hasPassedInlineRadar &&
     createPortal(
       <div
         className="pointer-events-auto max-h-[min(calc(100vh-5.5rem),580px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200/90 bg-white/95 p-2.5 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md xl:max-h-[min(calc(100vh-5rem),620px)]"
@@ -85,7 +89,7 @@ export function CustomerWorkspaceRadars({
           compact
           docked
           className="w-full min-w-0"
-          title="孩子与家长 6 维"
+          title="家长与孩子六维雷达图"
           childRadar={childRadar}
           parentRadar={parentRadar}
         />
@@ -100,13 +104,14 @@ export function CustomerWorkspaceRadars({
         className={inlineGridClassName}
         data-customer-inline-radars
       >
-        <div className="flex min-h-0 min-w-0">
+        <div className="flex h-full min-h-0 min-w-0">
           <RadarChartCardDual
             fillAvailableHeight
             className="min-h-0 w-full"
-            title="孩子与家长 6 维度雷达图"
+            title="家长与孩子六维雷达图"
             childRadar={childRadar}
             parentRadar={parentRadar}
+            squashed
           />
         </div>
       </div>

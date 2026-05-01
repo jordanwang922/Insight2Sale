@@ -18,6 +18,24 @@ describe("assessment question bank", () => {
     expect(parentTypeDefinitions).toHaveLength(9);
   });
 
+  test("index questions display their real index labels instead of core dimensions", () => {
+    expect(anxietyQuestions.map((q) => q.dimension)).toEqual([
+      "家长的教育焦虑指数",
+      "家长的教育焦虑指数",
+      "家长的教育焦虑指数",
+    ]);
+    expect(burnoutQuestions.map((q) => q.dimension)).toEqual([
+      "家长的教育倦怠指数",
+      "家长的教育倦怠指数",
+      "家长的教育倦怠指数",
+    ]);
+    expect(competenceQuestions.map((q) => q.dimension)).toEqual([
+      "家长的教养能力感",
+      "家长的教养能力感",
+      "家长的教养能力感",
+    ]);
+  });
+
   test("keeps every core dimension mapped to three child and three parent questions", () => {
     for (const definition of dimensionDefinitions) {
       const child = coreQuestions.filter(

@@ -13,9 +13,9 @@ export function AssessmentReportIndexCards({
   const card =
     isDark
       ? forSharePng
-        ? "rounded-xl bg-white/10 px-3 py-4 ring-1 ring-white/10"
-        : "rounded-xl bg-white/10 px-2 py-3 ring-1 ring-white/10"
-      : "rounded-[1.5rem] border border-slate-200 bg-white p-6";
+        ? "rounded-xl bg-white/10 px-3 py-4 text-center ring-1 ring-white/10"
+        : "rounded-xl bg-white/10 px-2 py-3 text-center ring-1 ring-white/10"
+      : "rounded-[1.5rem] border border-slate-200 bg-white p-6 text-center";
   const labelCls = isDark
     ? forSharePng
       ? "text-xs font-semibold uppercase tracking-wide text-white/70"
@@ -45,10 +45,8 @@ export function AssessmentReportIndexCards({
         return (
           <article key={title} className={card}>
             <p className={labelCls}>{title}</p>
-            <p className={pctCls}>{idx.percent}%</p>
-            <p className={subCls}>
-              {idx.verbalBand}（{idx.score}/{idx.maxScore} 分）
-            </p>
+            <p className={pctCls}>{idx.percent}分</p>
+            <p className={subCls}>{idx.verbalBand}</p>
           </article>
         );
       })}

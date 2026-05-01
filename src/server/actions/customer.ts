@@ -17,6 +17,23 @@ export async function addFollowUpNote(formData: FormData) {
 
   const { session } = await requireCustomerAccess(customerId);
 
+  const duplicate = await prisma.followUpNote.findFirst({
+    where: {
+      customerId,
+      authorId: session.user.id,
+      summary,
+      customerQuotes,
+      channel,
+      createdAt: { gte: new Date(Date.now() - 30_000) },
+    },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    revalidatePath(`/dashboard/customers/${customerId}`);
+    return;
+  }
+
   await prisma.followUpNote.create({
     data: {
       customerId,

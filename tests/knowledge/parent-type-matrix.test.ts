@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractCallModeCellsFromMatrix,
   extractParentTypeColumnFromMatrix,
+  extractParentTypeRowsFromMatrix,
   parentingTypeLabelsEquivalent,
 } from "@/features/knowledge/parent-type-matrix";
 
@@ -51,5 +52,31 @@ describe("extractCallModeCellsFromMatrix", () => {
     const cells = extractCallModeCellsFromMatrix(matrix, "温情弹性型");
     expect(cells.risk).toBe("对的风险文案");
     expect(cells.reminder).toBe("对的提醒文案");
+  });
+});
+
+describe("extractParentTypeRowsFromMatrix", () => {
+  it("只取当前类型列下指定行标签，不输出其它行或其它类型列", () => {
+    const matrix = [
+      ["", "独裁型", "温情弹性型"],
+      ["一句话总结", "独裁总结", "温情总结"],
+      ["给你一句关键提醒", "真正有效的规则，需要情感托底。", "温情提醒"],
+      ["你需要重点修炼的父母品质", "共情理解:看到行为背后的情绪与需求", "温情品质"],
+      ["匹配度分析", "不应输出", "不应输出2"],
+    ];
+
+    const rows = extractParentTypeRowsFromMatrix(matrix, "独裁型", [
+      "一句话总结",
+      "给你一句关键提醒",
+      "你需要重点修炼的父母品质",
+    ]);
+
+    expect(rows).toEqual({
+      一句话总结: "独裁总结",
+      给你一句关键提醒: "真正有效的规则，需要情感托底。",
+      你需要重点修炼的父母品质: "共情理解:看到行为背后的情绪与需求",
+    });
+    expect(Object.values(rows).join("\n")).not.toContain("温情");
+    expect(Object.values(rows).join("\n")).not.toContain("匹配度");
   });
 });

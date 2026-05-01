@@ -53,9 +53,9 @@ function burnoutVerbalFromRaw(raw: number): string {
 }
 
 function competenceVerbalFromRaw(raw: number): string {
-  if (raw >= 9) return "自我评估-教养能力强";
-  if (raw >= 4) return "自我评估-教养能力待提升";
-  return "自我评估-教养能力弱";
+  if (raw >= 9) return "能力强";
+  if (raw >= 4) return "待提升";
+  return "能力弱";
 }
 
 function toIndexScore(
@@ -88,13 +88,13 @@ function toParentTypeFromWordMatrix(
 ): ParentTypeDefinition {
   const s = supportGuidanceWordBand045(emotionalSupportRaw);
   const g = supportGuidanceWordBand045(ruleGuidanceRaw);
-  const table: Record<DimensionWordBand, Record<DimensionWordBand, number>> = {
-    优势: { 优势: 0, 潜力: 1, 卡点: 2 },
-    潜力: { 优势: 3, 潜力: 4, 卡点: 5 },
-    卡点: { 优势: 6, 潜力: 7, 卡点: 8 },
+  const table: Record<DimensionWordBand, Record<DimensionWordBand, string>> = {
+    优势: { 优势: "权威型", 潜力: "爱心管家型", 卡点: "放任型" },
+    潜力: { 优势: "温和管控型", 潜力: "温柔引导型", 卡点: "温情弹性型" },
+    卡点: { 优势: "独裁型", 潜力: "冷静管理型", 卡点: "忽视型" },
   };
-  const index = table[s][g];
-  return parentTypeDefinitions[index]!;
+  const name = table[s][g];
+  return parentTypeDefinitions.find((definition) => definition.name === name) ?? parentTypeDefinitions[0]!;
 }
 
 function combinedLevelFromWordBands(

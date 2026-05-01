@@ -58,7 +58,7 @@ export function buildCallModeBriefSegments(params: {
 
   if (rem) {
     segs.push({ text: " " });
-    segs.push({ text: "销售可先对齐 " });
+    segs.push({ text: "顾问可先对齐 " });
     segs.push({ text: rem, emphasis: true });
     segs.push({ text: "，再自然过渡到方案。" });
   } else if (core) {

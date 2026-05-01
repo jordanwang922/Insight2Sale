@@ -8,8 +8,11 @@ import { AssessmentReportCourseBlock } from "@/components/assessment/assessment-
 import { AssessmentReportFootnotes } from "@/components/assessment/assessment-report-footnotes";
 import { AssessmentReportIndexCards } from "@/components/assessment/assessment-report-index-cards";
 import { AssessmentReportParentTypeBlock } from "@/components/assessment/assessment-report-parent-type-block";
+import { AssessmentReportDimensionSummary } from "@/components/assessment/assessment-report-dimension-summary";
+import { AssessmentReportPracticeSections } from "@/components/assessment/assessment-report-practice-sections";
 import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
 import { AssessmentReport } from "@/features/assessment/types";
+import { lookupParentTypeReportCopy } from "@/features/knowledge/interpretation-lookup";
 
 type RadarChartDatum = {
   dimension: string;
@@ -36,6 +39,12 @@ export default async function AssessmentResultPage({
   const report = normalizeAssessmentReport(
     parseJson<AssessmentReport | null>(submission.reportSnapshot.reportData, null),
   );
+  const reportCopy = report
+    ? await lookupParentTypeReportCopy({
+        parentTypeName: report.parentType.name,
+        assessmentTemplateId: submission.templateId ?? undefined,
+      })
+    : { summary: null, sections: [] };
   const parentRadar = parseJson<RadarChartDatum[]>(submission.reportSnapshot.parentRadarData, []);
   const childRadar = parseJson<RadarChartDatum[]>(submission.reportSnapshot.childRadarData, []);
 
@@ -48,7 +57,7 @@ export default async function AssessmentResultPage({
             {submission.customer.wechatNickname} 的初步结果已经生成
           </h1>
           <p className="mt-4 text-sm leading-7 text-slate-600">
-            这份报告会先帮助你看到孩子和家长各自的 6 个维度现状。后续销售顾问会结合你的具体场景，为你做更完整的 1V1 解读。
+            这份报告会先帮助你看到孩子和家长各自的 6 个维度现状。后续学习顾问会结合你的具体场景，为你做更完整的 1V1 解读。
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700">
@@ -60,7 +69,9 @@ export default async function AssessmentResultPage({
           </div>
         </section>
 
-        {report ? <AssessmentReportParentTypeBlock report={report} /> : null}
+        {report ? <AssessmentReportDimensionSummary report={report} /> : null}
+
+        {report ? <AssessmentReportParentTypeBlock report={report} summary={reportCopy.summary} /> : null}
 
         <section>
           <RadarChartCardDual
@@ -84,6 +95,8 @@ export default async function AssessmentResultPage({
                 report={report}
                 childRadar={childRadar}
                 parentRadar={parentRadar}
+                parentTypeSummary={reportCopy.summary}
+                parentTypePracticeSections={reportCopy.sections}
               />
             </div>
           </section>
@@ -93,17 +106,21 @@ export default async function AssessmentResultPage({
 
         {report ? <AssessmentReportCourseBlock report={report} /> : null}
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6">
-          <h2 className="text-2xl font-semibold text-slate-950">系统初步建议</h2>
-          <p className="mt-4 text-sm leading-7 text-slate-600">{report?.matchAnalysis}</p>
-          <ul className="mt-6 space-y-3">
-            {report?.suggestions?.map((suggestion: string) => (
-              <li key={suggestion} className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-700">
-                {suggestion}
-              </li>
-            ))}
-          </ul>
-        </section>
+        {reportCopy.sections.length ? (
+          <AssessmentReportPracticeSections sections={reportCopy.sections} />
+        ) : (
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6">
+            <h2 className="text-2xl font-semibold text-slate-950">系统初步建议</h2>
+            <p className="mt-4 text-sm leading-7 text-slate-600">{report?.matchAnalysis}</p>
+            <ul className="mt-6 space-y-3">
+              {report?.suggestions?.map((suggestion: string) => (
+                <li key={suggestion} className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                  {suggestion}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {report ? <AssessmentReportFootnotes report={report} /> : null}
       </div>

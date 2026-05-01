@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getDefaultNewUserPassword } from "@/config/default-credentials";
 import { getManagerOverview, requireManagerSession } from "@/features/crm/queries";
 import { createManagerUser, createSalesUser } from "@/server/actions/users";
+import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 
 export default async function ManagerPage() {
   const session = await requireManagerSession();
@@ -167,7 +168,7 @@ export default async function ManagerPage() {
           {isAdminView ? (
             <>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">新增主管账号</p>
-              <form action={createManagerUser} className="mt-5 space-y-3">
+              <ActionFeedbackForm action={createManagerUser} className="mt-5" successMessage="主管账号已创建。">
                 <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="name" placeholder="主管姓名" />
                 <input
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3"
@@ -188,12 +189,12 @@ export default async function ManagerPage() {
                 <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white" type="submit">
                   创建主管账号
                 </button>
-              </form>
+              </ActionFeedbackForm>
             </>
           ) : (
             <>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">新增销售账号</p>
-              <form action={createSalesUser} className="mt-5 space-y-3">
+              <ActionFeedbackForm action={createSalesUser} className="mt-5" successMessage="销售账号已创建。">
                 <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="name" placeholder="销售姓名" />
                 <input
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3"
@@ -214,7 +215,7 @@ export default async function ManagerPage() {
                 <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white" type="submit">
                   创建销售账号
                 </button>
-              </form>
+              </ActionFeedbackForm>
             </>
           )}
         </article>

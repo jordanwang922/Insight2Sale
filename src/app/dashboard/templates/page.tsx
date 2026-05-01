@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireManagerSession } from "@/features/crm/queries";
 import { prisma } from "@/lib/prisma";
 import { approveSupplementalScript, updateTemplateMetadata } from "@/server/actions/templates";
+import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 
 export default async function TemplatesPage() {
   const session = await requireManagerSession();
@@ -46,10 +47,11 @@ export default async function TemplatesPage() {
           <div className="mt-5 space-y-4">
             {pendingScripts.length ? (
               pendingScripts.map((script) => (
-                <form
+                <ActionFeedbackForm
                   key={script.id}
                   action={approveSupplementalScript}
                   className="rounded-[1.5rem] bg-slate-50 p-5"
+                  successMessage="审核结果已保存。"
                 >
                   <input type="hidden" name="id" value={script.id} />
                   <input type="hidden" name="title" value={`${script.sectionTitle} · ${script.author.name}`} />
@@ -91,7 +93,7 @@ export default async function TemplatesPage() {
                       保存审核结果
                     </button>
                   </div>
-                </form>
+                </ActionFeedbackForm>
               ))
             ) : (
               <p className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500">
@@ -105,10 +107,11 @@ export default async function TemplatesPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">共享模板库</p>
           <div className="mt-5 space-y-4">
             {templates.map((template) => (
-              <form
+              <ActionFeedbackForm
                 key={template.id}
                 action={updateTemplateMetadata}
                 className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5"
+                successMessage="模板配置已保存。"
               >
                 <input name="id" type="hidden" value={template.id} />
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -142,7 +145,7 @@ export default async function TemplatesPage() {
                     </button>
                   </div>
                 </div>
-              </form>
+              </ActionFeedbackForm>
             ))}
           </div>
         </article>

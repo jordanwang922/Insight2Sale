@@ -7,6 +7,7 @@ import { getKnowledgeDocumentForEdit } from "@/features/crm/queries";
 import { updateKnowledgeDocument } from "@/server/actions/knowledge";
 import { DeleteKnowledgeButton } from "@/components/knowledge/delete-knowledge-button";
 import { parseJson } from "@/lib/utils";
+import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 
 export default async function EditKnowledgeDocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,7 +47,7 @@ export default async function EditKnowledgeDocumentPage({ params }: { params: Pr
           上传时间 {doc.createdAt.toLocaleString("zh-CN")} · 更新 {doc.updatedAt.toLocaleString("zh-CN")}
         </p>
 
-        <form action={updateKnowledgeDocument} className="mt-6 space-y-4">
+        <ActionFeedbackForm action={updateKnowledgeDocument} className="mt-6" successMessage="知识条目已保存。">
           <input type="hidden" name="id" value={doc.id} />
           <div>
             <label className="text-xs font-medium text-slate-600">标题</label>
@@ -133,7 +134,7 @@ export default async function EditKnowledgeDocumentPage({ params }: { params: Pr
               </Link>
             )}
           </div>
-        </form>
+        </ActionFeedbackForm>
         <div className="mt-4 border-t border-slate-100 pt-4">
           <p className="mb-2 text-xs text-slate-500">危险操作</p>
           <DeleteKnowledgeButton

@@ -16,6 +16,8 @@ import { AssessmentReportCourseBlock } from "@/components/assessment/assessment-
 import { AssessmentReportFootnotes } from "@/components/assessment/assessment-report-footnotes";
 import { AssessmentReportIndexCards } from "@/components/assessment/assessment-report-index-cards";
 import { AssessmentReportParentTypeBlock } from "@/components/assessment/assessment-report-parent-type-block";
+import { AssessmentReportPracticeSections } from "@/components/assessment/assessment-report-practice-sections";
+import { AssessmentReportDimensionSummary } from "@/components/assessment/assessment-report-dimension-summary";
 import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
 import { buildInterpretationDeskDisplayPieces } from "@/features/sales/sop-doc-pieces";
 import {
@@ -28,6 +30,7 @@ import {
 import { buildInterpretationDeskMarkdownForDisplay } from "@/features/sales/interpretation-desk-template";
 import { parseJson } from "@/lib/utils";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 
 function formatMaybeList(value?: string | null) {
   if (!value) return "未填写";
@@ -37,11 +40,15 @@ function formatMaybeList(value?: string | null) {
 
 export default async function CustomerWorkspacePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ customerId: string }>;
+  searchParams?: Promise<{ transitionsPage?: string }>;
 }) {
   const { customerId } = await params;
-  const data = await getCustomerWorkspace(customerId);
+  const query = searchParams ? await searchParams : {};
+  const transitionsPage = Math.max(1, Number(query.transitionsPage ?? 1) || 1);
+  const data = await getCustomerWorkspace(customerId, { statusTransitionPage: transitionsPage });
   if (!data) return null;
 
   const kb = data.kbWorkspaceInterpretation;
@@ -82,7 +89,8 @@ export default async function CustomerWorkspacePage({
       : null;
 
   const latestAppointments = data.customer.appointments.slice(0, 6);
-  const latestTransitions = data.customer.statusTransitions.slice(0, 6);
+  const latestTransitions = data.customer.statusTransitions;
+  const transitionPager = data.statusTransitionsPagination;
 
   const deskDisplayMarkdown = buildInterpretationDeskMarkdownForDisplay(deskChunks);
   const deskWithLive = applyInterpretationDeskLiveData(deskDisplayMarkdown, {
@@ -168,7 +176,7 @@ export default async function CustomerWorkspacePage({
 
       {/* 左：客户信息吃满剩余宽度；右：双雷达 + 各维度分析整体靠右贴齐，不留右侧空白 */}
       <section className="min-w-0 space-y-4">
-        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-1">
           <article className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
@@ -192,7 +200,12 @@ export default async function CustomerWorkspacePage({
               ))}
             </div>
 
-            <form action={updateCustomerStatus} className="mt-4 space-y-3">
+            <ActionFeedbackForm
+              key={`status-${data.customer.currentStatusId ?? "none"}`}
+              action={updateCustomerStatus}
+              className="mt-4"
+              successMessage="状态已保存。"
+            >
               <input type="hidden" name="customerId" value={data.customer.id} />
               <label className="block text-sm font-medium text-slate-900">
                 更新客户状态
@@ -216,33 +229,41 @@ export default async function CustomerWorkspacePage({
               <button className="w-full rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">
                 保存状态
               </button>
-            </form>
+            </ActionFeedbackForm>
           </article>
 
-          <div className="flex min-h-0 w-full min-w-0 flex-col gap-3 lg:h-full lg:w-[33.8rem] lg:max-w-full lg:shrink-0 lg:justify-self-end">
-            <CustomerWorkspaceRadars
-              childRadar={data.childRadar}
-              parentRadar={data.parentRadar}
-              inlineGridClassName="grid min-h-0 flex-1 grid-cols-1 gap-3"
-            />
-            {report ? (
-              <div className="max-h-[min(32rem,50vh)] w-full shrink-0 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] lg:max-h-none lg:overflow-visible">
-                <DimensionAnalysisGrid
-                  dimensions={report.dimensionScores}
-                  className="p-4 sm:p-5 [&_h2]:text-lg"
-                />
-              </div>
-            ) : null}
-          </div>
         </div>
 
         {report ? (
-          <div className="min-w-0 space-y-4">
-            <AssessmentReportParentTypeBlock report={report} />
-            <AssessmentReportIndexCards report={report} />
-            <AssessmentReportCourseBlock report={report} />
-            <AssessmentReportFootnotes report={report} />
-          </div>
+          <>
+            <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)] xl:items-start">
+              <div className="min-w-0 space-y-4">
+                <AssessmentReportParentTypeBlock
+                  compact
+                  hideDiagnostics
+                  report={report}
+                  titleOnly
+                />
+                <CustomerWorkspaceRadars
+                  childRadar={data.childRadar}
+                  parentRadar={data.parentRadar}
+                  inlineGridClassName="grid h-[34rem] w-full grid-cols-1"
+                />
+                <AssessmentReportDimensionSummary report={report} compact />
+              </div>
+              <div className="min-w-0 space-y-4">
+                <DimensionAnalysisGrid
+                  dimensions={report.dimensionScores}
+                  className="min-w-0 p-4 sm:p-5 [&_h2]:text-lg"
+                />
+              </div>
+            </div>
+            <div className="min-w-0 space-y-4">
+              <AssessmentReportIndexCards report={report} />
+              <AssessmentReportCourseBlock report={report} />
+              <AssessmentReportFootnotes report={report} />
+            </div>
+          </>
         ) : null}
 
         {report ? (
@@ -259,6 +280,8 @@ export default async function CustomerWorkspacePage({
                 childRadar={data.childRadar}
                 parentRadar={data.parentRadar}
                 fileNameBase="解读台-测评报告"
+                parentTypeSummary={kb?.parentTypeSummary}
+                parentTypePracticeSections={kb?.parentTypePracticeSections ?? []}
               />
             </div>
           </article>
@@ -292,25 +315,36 @@ export default async function CustomerWorkspacePage({
               ) : null}
             </div>
             <h2 className="mt-5 text-2xl font-semibold text-slate-950">
-              {report?.salesSummary?.headline?.trim() ||
-                (kb?.parentTypeSnippet
-                  ? `${report?.parentType?.name ?? "家长类型"} · 类型解读`
-                  : null) ||
+              {(kb?.parentTypeSnippet || kb?.parentTypePracticeSections?.length
+                ? `${report?.parentType?.name ?? "家长类型"} · 类型解读`
+                : null) ||
+                report?.salesSummary?.headline?.trim() ||
                 aiOutput?.callMode.headline?.trim() ||
                 "等待测评报告"}
             </h2>
             <div className="mt-4 text-sm leading-7 text-slate-600">
-              {kb?.parentTypeSnippet?.trim() ? (
-                <ParentTypeInterpretationText text={kb.parentTypeSnippet} />
-              ) : report?.matchAnalysis?.trim() ? (
-                <p className="whitespace-pre-line">{report.matchAnalysis}</p>
-              ) : aiOutput?.callMode.extendedBrief?.trim() ? (
-                <p className="whitespace-pre-line">{aiOutput.callMode.extendedBrief}</p>
+              {kb?.parentTypeSnippet?.trim() || kb?.parentTypePracticeSections?.length ? (
+                <div className="space-y-5">
+                  {kb?.parentTypePracticeSections?.length ? (
+                    <AssessmentReportPracticeSections sections={kb.parentTypePracticeSections} />
+                  ) : null}
+                  {kb?.parentTypeSnippet?.trim() ? (
+                    <ParentTypeInterpretationText text={kb.parentTypeSnippet} />
+                  ) : null}
+                </div>
               ) : (
-                <p>当前客户还没有生成完整测评报告，请先完成家长测评或补齐报告数据。</p>
+                <>
+                  {report?.matchAnalysis?.trim() ? (
+                    <p className="whitespace-pre-line">{report.matchAnalysis}</p>
+                  ) : aiOutput?.callMode.extendedBrief?.trim() ? (
+                    <p className="whitespace-pre-line">{aiOutput.callMode.extendedBrief}</p>
+                  ) : (
+                    <p>当前客户还没有生成完整测评报告，请先完成家长测评或补齐报告数据。</p>
+                  )}
+                </>
               )}
             </div>
-            {aiOutput?.callMode.salesHooks?.length ? (
+            {!kb?.parentTypeSnippet?.trim() && !kb?.parentTypePracticeSections?.length && aiOutput?.callMode.salesHooks?.length ? (
               <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-7 text-slate-700">
                 {aiOutput.callMode.salesHooks.map((hook, index) => (
                   <li key={index}>{hook}</li>
@@ -320,15 +354,15 @@ export default async function CustomerWorkspacePage({
             <div className="mt-6 grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-slate-500">教育焦虑</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-950">{report?.anxiety?.percent ?? 0}%</p>
+                <p className="mt-3 text-3xl font-semibold text-slate-950">{report?.anxiety?.percent ?? 0}分</p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-slate-500">养育倦怠</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-950">{report?.burnout?.percent ?? 0}%</p>
+                <p className="mt-3 text-3xl font-semibold text-slate-950">{report?.burnout?.percent ?? 0}分</p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-slate-500">教养能力感</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-950">{report?.competence?.percent ?? 0}%</p>
+                <p className="mt-3 text-3xl font-semibold text-slate-950">{report?.competence?.percent ?? 0}分</p>
               </div>
             </div>
           </article>
@@ -359,7 +393,7 @@ export default async function CustomerWorkspacePage({
       <section className="grid gap-4 xl:grid-cols-2">
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">添加跟进记录</p>
-          <form action={addFollowUpNote} className="mt-5 space-y-3">
+          <ActionFeedbackForm action={addFollowUpNote} className="mt-5" successMessage="跟进记录已保存。">
             <input type="hidden" name="customerId" value={data.customer.id} />
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="channel" defaultValue="电话" />
             <textarea className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3" name="summary" placeholder="记录这次解读的重点、客户反馈和下一步判断" />
@@ -367,12 +401,12 @@ export default async function CustomerWorkspacePage({
             <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
               保存跟进记录
             </button>
-          </form>
+          </ActionFeedbackForm>
         </article>
 
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">安排预约</p>
-          <form action={createAppointment} className="mt-5 space-y-3">
+          <ActionFeedbackForm action={createAppointment} className="mt-5" successMessage="预约已保存。">
             <input type="hidden" name="customerId" value={data.customer.id} />
             <input type="hidden" name="ownerId" value={data.customer.ownerId} />
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="title" placeholder="例如：1V1 解读 / 直播 / 试听" />
@@ -386,14 +420,14 @@ export default async function CustomerWorkspacePage({
             <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
               保存预约
             </button>
-          </form>
+          </ActionFeedbackForm>
         </article>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">销售个人文案</p>
-          <form action={savePersonaProfile} className="mt-5 space-y-3">
+          <ActionFeedbackForm action={savePersonaProfile} className="mt-5" successMessage="个人文案库已保存。">
             <input type="hidden" name="userId" value={data.customer.ownerId} />
             <input type="hidden" name="customerId" value={data.customer.id} />
             <input className="w-full rounded-2xl border border-slate-200 px-4 py-3" name="displayTitle" defaultValue={data.persona?.displayTitle ?? ""} placeholder="你的对外身份头衔" />
@@ -405,7 +439,7 @@ export default async function CustomerWorkspacePage({
             <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
               保存个人文案库
             </button>
-          </form>
+          </ActionFeedbackForm>
         </article>
 
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
@@ -450,7 +484,7 @@ export default async function CustomerWorkspacePage({
           </div>
         </article>
 
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-6">
+        <article id="status-transitions" className="rounded-[2rem] border border-slate-200 bg-white p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">状态流转历史</p>
           <div className="mt-5 space-y-3">
             {latestTransitions.length ? (
@@ -469,6 +503,31 @@ export default async function CustomerWorkspacePage({
               <p className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500">当前客户还没有状态流转记录。</p>
             )}
           </div>
+          {transitionPager.pageCount > 1 ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+              <p className="text-slate-500">
+                第 {transitionPager.page} / {transitionPager.pageCount} 页，共 {transitionPager.total} 条
+              </p>
+              <div className="flex gap-2">
+                {transitionPager.page > 1 ? (
+                  <a
+                    className="rounded-full bg-slate-100 px-4 py-2 font-medium text-slate-700"
+                    href={`/dashboard/customers/${data.customer.id}?transitionsPage=${transitionPager.page - 1}#status-transitions`}
+                  >
+                    上一页
+                  </a>
+                ) : null}
+                {transitionPager.page < transitionPager.pageCount ? (
+                  <a
+                    className="rounded-full bg-slate-950 px-4 py-2 font-medium text-white"
+                    href={`/dashboard/customers/${data.customer.id}?transitionsPage=${transitionPager.page + 1}#status-transitions`}
+                  >
+                    下一页
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </article>
       </section>
     </div>

@@ -17,6 +17,11 @@ export async function createAppointment(formData: FormData) {
   const notes = String(formData.get("notes") || "");
 
   if ((!title && !kind) || !startAt || !endAt) return;
+  const startDate = new Date(startAt);
+  const endDate = new Date(endAt);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    throw new Error("请选择有效的预约开始和结束时间。");
+  }
 
   let resolvedOwnerId = ownerId;
   let resolvedCustomerId: string | null = null;
@@ -46,6 +51,29 @@ export async function createAppointment(formData: FormData) {
     throw new Error("你没有权限为其他销售创建预约。");
   }
 
+  const duplicate = await prisma.appointment.findFirst({
+    where: {
+      customerId: resolvedCustomerId,
+      ownerId: resolvedOwnerId,
+      title: title || kind,
+      kind: kind || title,
+      participantName: participantName || null,
+      startAt: startDate,
+      endAt: endDate,
+      notes,
+      createdAt: { gte: new Date(Date.now() - 30_000) },
+    },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    revalidatePath(pathToRevalidate);
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/manager");
+    return;
+  }
+
   await prisma.appointment.create({
     data: {
       customerId: resolvedCustomerId,
@@ -53,8 +81,8 @@ export async function createAppointment(formData: FormData) {
       title: title || kind,
       kind: kind || title,
       participantName: participantName || null,
-      startAt: new Date(startAt),
-      endAt: new Date(endAt),
+      startAt: startDate,
+      endAt: endDate,
       notes,
     },
   });

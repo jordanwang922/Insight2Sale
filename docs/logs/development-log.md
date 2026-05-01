@@ -23,6 +23,133 @@
 
 ## 当前记录
 
+### 2026-04-30 测评报告评分矩阵、指数标签与学习顾问文案
+
+- 本次目标：修正 45 题测评表第 37-45 题维度标签、报告中 9 型「家长养育类型」矩阵映射、三指数分数/文案展示，并将页面中的「销售顾问」改为「学习顾问」。
+- 完成内容：
+  - **题目标签**：`questions.ts` 对 37-39 / 40-42 / 43-45 题分别覆盖显示为 **家长的教育焦虑指数 / 家长的教育倦怠指数 / 家长的教养能力感**，避免 Word 生成题库里沿用 `需求`。
+  - **9 型矩阵**：`scoring.ts` 按 **情感支持度（维度1+2+3）x 规则引导度（维度4+5+6）** 映射：高高=权威型、中高=温和管控型、低高=独裁型、高中=爱心管家型、中中=温柔引导型、低中=冷静管理型、高低=放任型、中低=温情弹性型、低低=忽视型；`report-normalize.ts` 会基于快照中的 `emotionalSupportRaw/ruleGuidanceRaw` 重算展示类型，避免历史快照继续显示旧错误类型。
+  - **三指数**：教育焦虑 / 养育倦怠 / 教养能力感继续按 3 题原始分 `/15*100` 取整，报告 UI 显示为 **xx分**；教养能力感文案改为 **能力弱 / 待提升 / 能力强**。
+  - **报告展示**：新增家长/孩子 6 维综合摘要卡（各自平均分 + 优势/潜力/卡点数量）；家长类型卡优先读取知识库 **「父母养育的9种类型解读」** 对应类型的 **「一句话总结」**；类型重点提醒优先读取 **「家长9型解析」** 的 **「给你一句关键提醒」** 与 **「你需要重点修炼的父母品质」**。
+  - **知识库抽取**：`parent-type-matrix.ts` 新增按当前类型列 + 指定行标签抽取能力，避免整列旧内容混入「匹配度分析 / 成长建议」等不需要的报告块。
+  - **文案**：家长结果页与 README 中「销售顾问」改为 **「学习顾问」**。
+- 影响文件（摘）：`src/features/assessment/scoring.ts`、`questions.ts`、`report-normalize.ts`、`src/features/knowledge/parent-type-matrix.ts`、`interpretation-lookup.ts`、`src/components/assessment/*`、`src/app/assessment/result/[submissionId]/page.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`、`tests/assessment/*`、`tests/knowledge/parent-type-matrix.test.ts`、`README.md`、`DOCS/logs/*.md`、`DOCS/design/system-design.md`
+- 验证情况：**`npm test`** 全量通过（17 files / 49 tests）；**`npm run build`** 通过。**`npm run lint`** 仍失败于既有 React Hooks 规则问题（如 `customer-workspace-radars.tsx`、登录/改密表单、`interpretation-desk-template.ts`、`ark-embedding.ts`），非本次改动引入。
+- 风险 / 注意事项：知识库精确取文依赖 Excel 首列行标签接近 **一句话总结 / 给你一句关键提醒 / 你需要重点修炼的父母品质**；如客户上传表头命名差异较大，需扩展 `rowLabelMatches` 规则。
+- 下一步建议：用真实知识库 Excel 验收 9 个类型各自的一句话总结、关键提醒、修炼品质；如需历史报告快照也同步新 9 型结论，需批量重算 `ReportSnapshot.reportData`。
+
+### 2026-04-30 解读台同步新评分与 9 型报告逻辑
+
+- 本次目标：确保 **解读台** 不只展示层改报告，而是在数据查询、知识库取文、通话模式和列表入口都使用同一套新评分 / 9 型逻辑。
+- 完成内容：
+  - `getCustomerWorkspace` 在 CRM 查询层先执行 `normalizeAssessmentReport`，再用重算后的 `parentType.name` 做知识库精确取文和通话模式查询，避免旧 `ReportSnapshot.reportData.parentType` 继续污染解读台。
+  - 客户列表页 `dashboard/customers` 的家长类型也改为 normalize 后展示，避免列表与解读台详情页显示不一致。
+  - 解读台报告区新增 `AssessmentReportDimensionSummary`，与家长端一样显示家长/孩子各维度平均分及优势/潜力/卡点数量。
+  - 解读台类型解读区如果已取到 **「给你一句关键提醒」** 与 **「你需要重点修炼的父母品质」**，不再叠加 AI 旧 `salesHooks` 列表，避免图七旧「匹配度分析/成长建议」口径混入。
+  - 通话模式短句中的「销售可先对齐」改为「顾问可先对齐」。
+- 影响文件：`src/features/crm/queries.ts`、`src/app/dashboard/customers/page.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`、`src/features/crm/call-mode-brief.ts`、`DOCS/logs/*.md`
+- 验证情况：`npm test -- tests/assessment/word-scoring-boundaries.test.ts tests/features/crm/call-mode-brief.test.ts tests/crm/dashboard.test.ts` 通过；`npm run build` 通过；本地 dev 服务仍在 **http://localhost:3001** 运行。
+- 风险 / 注意事项：解读台页面当前每次请求仍会查询知识库与生成 AI 输出，已有页面响应约 8-10s；若后续觉得慢，应缓存 `lookupParentTypeReportCopy` 或减少实时 AI 生成。
+
+### 2026-04-30 解读台布局与长文恢复
+
+- 本次目标：响应验收反馈：解释图 1 文案来源；将解读台上方布局改为左侧「家长养育类型 + 雷达图」、右侧「各维度详细分析」；恢复原本的长类型解读和 SOP，不因新指定板块而删掉旧长文。
+- 完成内容：
+  - 图 1 的「负责，但不够温柔 / 中接纳+高要求 / …」来自代码内置 `parentTypeDefinitions` 的 `description` 与 `characteristics`，仅作为知识库缺失时的兜底；知识库有内容时仍优先显示「一句话总结」。
+  - `buildKbWorkspaceInterpretation` 恢复 `parentTypeSnippet` 为原来的当前类型整列长文；`parentTypePracticeSections` 只作为新增指定板块，不再替换长文。
+  - 解读台报告概览改为两栏：左栏上方家长养育类型、下方孩子/家长 6 维雷达图；右栏整块显示各维度详细分析。
+  - 解读台类型解读区先显示新规则指定的「给你一句关键提醒 / 你需要重点修炼的父母品质」，再保留原来的长文 `ParentTypeInterpretationText`；SOP 模版块保持原样。
+- 影响文件：`src/features/knowledge/interpretation-lookup.ts`、`src/app/dashboard/customers/[customerId]/page.tsx`、`DOCS/logs/development-log.md`
+- 验证情况：`npm test -- tests/knowledge/parent-type-matrix.test.ts tests/assessment/word-scoring-boundaries.test.ts` 通过；`npm run build` 通过。
+
+### 2026-04-30 解读台/长图视觉细节修正
+
+- 本次目标：按验收截图修正指数卡、浮动雷达与分享长图底部内容。
+- 完成内容：
+  - `AssessmentReportIndexCards`：三张指数卡内容整体居中；底部只显示 **比较焦虑 / 比较疲惫 / 能力弱** 等文案，去掉 `（x/15 分）`。
+  - `CustomerWorkspaceRadars` / `RadarChartCardDual`：左侧浮动雷达宽度收窄，避免遮挡课程学习等内容；标题改为完整 **家长与孩子六维雷达图** 且单行显示，图例置于标题下方。
+  - `AssessmentReportParentTypeBlock`：分享长图模式下去掉内置特征 bullet 与情感/规则 raw 分说明，只保留类型名与一句话总结。
+  - `AssessmentReportSharePanel`：分享长图先移除底部 **课程学习建议** 与 **脚注说明** 两块。
+- 影响文件：`src/components/assessment/assessment-report-index-cards.tsx`、`assessment-report-parent-type-block.tsx`、`assessment-report-share-panel.tsx`、`src/components/dashboard/customer-workspace-radars.tsx`、`src/components/charts/radar-chart-card.tsx`
+- 验证情况：`npm test -- tests/components/radar-chart-card.test.tsx tests/assessment/report.test.ts tests/assessment/word-bands.test.ts` 通过；`npm run build` 通过。
+
+### 2026-04-30 解读台首屏高度与分享长图格式继续调整
+
+- 本次目标：让解读台左/右首屏模块高度更接近；让摘要得分条并入右侧详细分析上方；让雷达图变正方形；让分享长图的类型重点提醒更接近用户给定格式。
+- 完成内容：
+  - `AssessmentReportDimensionSummary` 增加 `compact` 模式：每条摘要一行显示，左侧为「家长/孩子各维度综合得分：xx分」，右侧为「x项优势·x项潜力·x项卡点」。
+  - 解读台首屏改为右侧 `AssessmentReportDimensionSummary compact` + `DimensionAnalysisGrid`，左侧为缩短的家长类型卡 + 正方形雷达图，减少左右高度差。
+  - `AssessmentReportPracticeSections` 在分享长图模式下取消每段黑底卡片，改为标题 + 正文的直接排版，更贴近指定格式。
+- 影响文件：`src/components/assessment/assessment-report-dimension-summary.tsx`、`assessment-report-practice-sections.tsx`、`assessment-report-parent-type-block.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`
+- 验证情况：`npm test -- tests/assessment/report.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过。
+
+### 2026-04-30 解读台首屏与分享长图最终收口
+
+- 本次目标：继续按验收截图收口布局：首屏左右等高、右侧摘要与详细分析合并、分享长图雷达正方形、家长类型块直接承接知识库两段提醒。
+- 完成内容：
+  - `AssessmentReportParentTypeBlock` 新增 `practiceSections`、`hideDiagnostics`、`compact`：解读台首屏可隐藏情感/规则原始分，只保留类型、一句话总结和知识库两段提醒；分享长图中两段提醒紧跟家长类型块展示。
+  - 解读台首屏两栏比例改为左窄右宽；左侧雷达限制为 `aspect-square max-h-[31rem]`，避免再次拉成长方形。
+  - `CustomerWorkspaceRadars` 内联雷达容器补 `h-full`，标题统一为 **家长与孩子六维雷达图**。
+  - `RadarChartCardDual.forSharePng` 改为 `aspect-square` 内部自适应，不再使用固定 `22rem/96` 高度，避免长图雷达上下空白。
+  - 分享长图中如已取得「给你一句关键提醒 / 你需要重点修炼的父母品质」，不再另起一块重复展示。
+- 影响文件：`src/components/assessment/assessment-report-parent-type-block.tsx`、`assessment-report-share-panel.tsx`、`src/components/dashboard/customer-workspace-radars.tsx`、`src/components/charts/radar-chart-card.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`
+- 验证情况：`npm test -- tests/assessment/report.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+
+### 2026-04-30 解读台首屏类型卡极简与雷达对齐
+
+- 本次目标：按验收反馈，首屏家长养育类型卡只保留类型名称，并让下方黑色雷达卡与上方黄色类型卡同栏边缘对齐。
+- 完成内容：
+  - `AssessmentReportParentTypeBlock` 新增 `titleOnly` 模式；解读台首屏只显示如 **冷静管理型** 的类型名称，不显示标题、总结、两段提醒、特征 bullet 或原始分。
+  - 解读台左栏宽度比例进一步收窄；雷达外层去掉 `max-h` 截断，改为 `aspect-square w-full`，避免宽度仍满而高度被截导致边缘不齐。
+- 影响文件：`src/components/assessment/assessment-report-parent-type-block.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`
+- 验证情况：`npm test -- tests/assessment/report.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+
+### 2026-04-30 解读台左栏补齐与系统错误容错
+
+- 本次目标：把家长/孩子综合得分两条移到雷达图下方补齐左栏高度；修复系统业务错误直接显示英文白屏的问题。
+- 完成内容：
+  - 解读台首屏左栏调整为 **类型名 → 雷达图 → 综合得分两条**，右栏只保留 **各维度详细分析** 大框，让左右高度更接近。
+  - `submitLogin` 捕获 NextAuth `AuthError`，错误密码等登录失败跳回 `/login?error=...`，由登录页显示 **用户名或密码错误，请重试。**，不再进入 Next.js 错误页。
+  - 新增 `src/app/error.tsx` 与 `src/app/global-error.tsx`，将漏网的页面/服务端错误改为中文错误页，展示可读错误信息、错误编号、重新加载和返回工作台入口。
+  - `AssessmentForm` 增加答题完整性前端校验：题目未答完时直接在测评页提示 **已答 x / 45 题**，不再由服务端抛错。
+- 影响文件：`src/app/dashboard/customers/[customerId]/page.tsx`、`src/server/actions/auth-login.ts`、`src/app/error.tsx`、`src/app/global-error.tsx`、`src/components/assessment/assessment-form.tsx`
+- 验证情况：`npm test -- tests/assessment/report.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+
+### 2026-04-30 保存反馈、防重复提交与状态历史分页
+
+- 本次目标：继续修正解读台首屏左右对齐；让保存类操作有明确成功提示并防止重复点击产生重复数据；给状态流转历史增加分页。
+- 完成内容：
+  - 解读台首屏左栏宽度比例从 `0.82fr` 收窄到 `0.76fr`，右栏加宽到 `1.24fr`，使左侧三块底线更容易与右侧各维度详细分析对齐。
+  - 新增 `ActionFeedbackForm`：提交中禁用整个表单，显示 **正在保存，请不要重复点击**；成功显示对应 **保存成功** 提示；失败显示中文错误。
+  - 解读台客户页的 **保存状态 / 保存跟进记录 / 保存预约 / 保存个人文案库** 已接入成功提示与提交中禁用。
+  - 团队总览创建账号、日历预约新增/修改/删除、状态字典新增/更新、测评模板新增/更新、知识条目编辑、话术模板审核/配置也接入同一保存反馈壳。
+  - 服务端幂等：30 秒内相同跟进记录、相同预约重复提交直接忽略；客户状态如果已是目标状态则不再新增流转记录。
+  - `getCustomerWorkspace` 支持状态流转分页；客户页通过 `transitionsPage` 查询参数展示上一页/下一页与总条数。
+- 影响文件：`src/components/forms/action-feedback-form.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`、`src/features/crm/queries.ts`、`src/server/actions/customer.ts`、`src/server/actions/statuses.ts`、`src/server/actions/appointments.ts`、`src/app/dashboard/calendar/page.tsx`、`src/app/dashboard/manager/page.tsx`、`src/app/dashboard/settings/statuses/page.tsx`、`src/app/dashboard/assessments/page.tsx`、`src/app/dashboard/templates/page.tsx`、`src/app/dashboard/knowledge/document/[id]/edit/page.tsx`
+- 验证情况：`npm test -- tests/assessment/report.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+
+### 2026-05-01 雷达可读性、知识库页精简与首页统计修正
+
+- 本次目标：按验收反馈优化浮动雷达可读性；移除知识库总览页过长的「检索与状态」板块；修正首页状态统计只看最终状态、状态卡只显示 4 个、首页黑色总览被预约列表撑高的问题。
+- 完成内容：
+  - `RadarChartCardDual` 的 docked 浮动模式：标题字号下调，雷达画布高度增加，维度标签字号、网格线、折线宽度和对比度提高，便于在左侧窄栏读取。
+  - `/dashboard/knowledge` 移除整块 **检索与状态**，只保留知识库分类入口与新增知识表单；具体检索/编辑改走分类页和知识条目编辑页。
+  - `/dashboard` 状态统计口径改为 **到达过该状态的客户数**：当前状态与 `StatusTransition.toStatusId` 历史均计入，同一客户同一状态只算一次。
+  - 首页状态卡不再 `.slice(0, 4)`，改为 `xl:grid-cols-5`，有几个非零状态就显示几个，避免「已付款」等状态被覆盖。
+  - 首页首屏总览区改为 `items-start`，黑色「今日工作总览」固定最小高度，右侧「今日预约」内部滚动，避免预约数量增加时把左侧黑框拉长。
+- 影响文件：`src/components/charts/radar-chart-card.tsx`、`src/app/dashboard/knowledge/page.tsx`、`src/app/dashboard/page.tsx`、`src/features/crm/queries.ts`
+- 验证情况：`npm test -- tests/assessment/report.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+
+### 2026-05-01 解读台雷达高度与浮动出现条件修正
+
+- 本次目标：解读台首屏左侧雷达卡再压扁，让下方两条综合得分上移补齐右侧详细分析高度；修复进页面时左侧浮动雷达直接出现并挡住菜单的问题。
+- 完成内容：
+  - `RadarChartCardDual` 新增 `squashed` 模式；`CustomerWorkspaceRadars` 内联大雷达使用压低高度，不再强制正方形。
+  - 客户详情页内联雷达外层从 `aspect-square` 改为固定较扁高度 `h-[34rem]`，为下方摘要留出空间。
+  - 浮动小雷达增加 `hasPassedInlineRadar` 条件：只有内联大雷达从屏幕上方滚出后才显示；刚进入页面或内联雷达仍在下方未出现时，不显示左侧浮窗，避免遮挡侧边菜单。
+- 影响文件：`src/components/charts/radar-chart-card.tsx`、`src/components/dashboard/customer-workspace-radars.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`
+- 验证情况：`npm test -- tests/assessment/report.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+
 ### 2026-04-12 v1.2.0 版本号与文档对齐
 
 - **package.json / package-lock.json** → **`1.2.0`**（`npm version 1.2.0 --no-git-tag-version`）。
