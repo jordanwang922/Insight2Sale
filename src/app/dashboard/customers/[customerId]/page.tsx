@@ -247,7 +247,7 @@ export default async function CustomerWorkspacePage({
                 <CustomerWorkspaceRadars
                   childRadar={data.childRadar}
                   parentRadar={data.parentRadar}
-                  inlineGridClassName="grid h-[34rem] w-full grid-cols-1"
+                  inlineGridClassName="grid h-[25rem] w-full grid-cols-1"
                 />
                 <AssessmentReportDimensionSummary report={report} compact />
               </div>

@@ -60,7 +60,7 @@ export function AssessmentReportParentTypeBlock({
               : "mt-3 text-xl font-semibold text-slate-950"
         }
       >
-        {report.parentType.name}
+        {titleOnly ? `家长类型：${report.parentType.name}` : report.parentType.name}
       </h2>
       {!titleOnly ? (
         <p

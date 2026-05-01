@@ -23,6 +23,16 @@
 
 ## 当前记录
 
+### 2026-05-01 13:40 解读台左栏高度与家长类型标题修正
+
+- 本次目标：按验收反馈修正解读台首屏左栏：黑色雷达卡应更短，下面两条综合得分一起参与左栏高度，左侧四条合计与右侧「各维度详细分析」尽量齐平；家长类型标题需显示前缀。
+- 完成内容：
+  - 解读台首屏家长类型极简卡由 **温情弹性型** 改为 **家长类型：温情弹性型** 这种格式。
+  - 内联黑色雷达卡高度从 `34rem` 回调到 `25rem`，`RadarChartCardDual.squashed` 内部最小高度同步从 `26rem` 下调到 `17rem`，避免内部 min-height 把卡片重新撑高，并在 23rem 过短与 27rem 过长之间取中间值。
+  - 左栏仍保持 **家长类型 → 雷达图 → 家长综合得分 → 孩子综合得分** 四段结构，右栏仍只保留「各维度详细分析」。
+- 影响文件：`src/components/assessment/assessment-report-parent-type-block.tsx`、`src/components/charts/radar-chart-card.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`
+- 验证情况：`npm test -- tests/components/radar-chart-card.test.tsx tests/assessment/report.test.ts` 通过；`npm run build` 通过；`git diff --check` 通过。
+
 ### 2026-04-30 测评报告评分矩阵、指数标签与学习顾问文案
 
 - 本次目标：修正 45 题测评表第 37-45 题维度标签、报告中 9 型「家长养育类型」矩阵映射、三指数分数/文案展示，并将页面中的「销售顾问」改为「学习顾问」。

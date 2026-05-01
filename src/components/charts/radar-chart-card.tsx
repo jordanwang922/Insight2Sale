@@ -402,7 +402,7 @@ export function RadarChartCardDual({
           compact && !dock && forSharePng && "min-h-0 flex-1",
           compact && !dock && !forSharePng && "min-h-[280px] h-72 sm:min-h-[300px] sm:h-80",
           !compact && !stretch && "min-h-[280px] h-[22rem] sm:min-h-[300px] sm:h-80",
-          stretch && (squashed ? "min-h-[26rem] flex-1" : "min-h-80 flex-1"),
+          stretch && (squashed ? "min-h-[17rem] flex-1" : "min-h-80 flex-1"),
         )}
       >
         {hasData ? (
