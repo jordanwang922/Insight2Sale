@@ -23,6 +23,19 @@
 
 ## 当前记录
 
+### 2026-05-02 账号默认密码重置
+
+- 本次目标：在 **主管总览** 的新增账号卡片下增加密码重置能力；主管可重置直属销售，管理员可重置主管；被重置账号下次登录必须修改密码。
+- 完成内容：
+  - `src/server/actions/users.ts` 新增 `resetSalesUserPassword` 与 `resetManagerUserPassword`：重置为 `DEFAULT_NEW_USER_PASSWORD`，并将 `User.defaultPassword` 置为 `true`。
+  - 主管重置范围限定为自己的直属销售；管理员重置范围为主管账号。
+  - `/dashboard/manager` 在新增销售 / 新增主管卡片下方增加 **重置密码** 表单：先选择账号，再点击 **确认重置密码**；提交中禁用并复用 `ActionFeedbackForm` 显示成功/失败提示。
+  - 重置按钮文案改为 **重置密码**；点击后先弹出页面内自定义确认弹窗（不再使用浏览器原生 `confirm()`，避免顶部显示 `localhost:3001`），取消不提交，确认后才提交服务端重置。
+  - 修复自定义弹窗点 **确认** 后仍停留在弹窗上的问题：确认按钮先关闭弹窗，再触发隐藏 submit 按钮提交表单。
+  - 设计文档补充账号重置规则。
+- 影响文件：`src/server/actions/users.ts`、`src/app/dashboard/manager/page.tsx`、`src/components/forms/confirm-submit-button.tsx`、`docs/design/system-design.md`
+- 验证情况：`npm test -- tests/crm/dashboard.test.ts` 通过；`npm run build` 通过；`git diff --check` 通过。日志未超过 500 行，无需归档。
+
 ### 2026-05-01 13:40 解读台左栏高度与家长类型标题修正
 
 - 本次目标：按验收反馈修正解读台首屏左栏：黑色雷达卡应更短，下面两条综合得分一起参与左栏高度，左侧四条合计与右侧「各维度详细分析」尽量齐平；家长类型标题需显示前缀。

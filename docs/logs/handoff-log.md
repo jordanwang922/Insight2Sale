@@ -42,6 +42,7 @@
   - **新建用户默认密码**（销售 / 主管）：环境变量 **`DEFAULT_NEW_USER_PASSWORD`**（至少 8 位，勿写入 Git）；代码见 **`getDefaultNewUserPassword()`**；`User.defaultPassword`。
   - **角色**：**`ADMIN`**（唯一管理员账号约定为 **`admin`**）仅建主管、看全组织；**`MANAGER`** 建销售；主管 **`adminId`** 指向管理员。
   - **首次登录强制改密**：`session.user.mustChangePassword`；未改密不能进 `/dashboard`；改密后自动进工作台（见 `change-password-form.tsx`）。
+  - **默认密码重置**：`src/server/actions/users.ts` 中 `resetSalesUserPassword` 允许主管把直属销售重置为 `DEFAULT_NEW_USER_PASSWORD`；`resetManagerUserPassword` 允许管理员把主管重置为 `DEFAULT_NEW_USER_PASSWORD`。两者都会把 `User.defaultPassword = true`，所以被重置账号下次登录会强制改密。入口在 `/dashboard/manager` 新增账号卡片下方，需选择账号并点击 **重置密码**；按钮由 `ConfirmSubmitButton` 弹出页面内自定义确认弹窗，取消不会提交，确认才提交。
   - 主管在 **团队总览 → 新增销售**、管理员在 **组织总览 → 新增主管** 处有**醒目提示**默认密码与安全告知。
   - **云端补管理员（无 seed 演示数据时）**：迁移应用后生成 SQL（读 `.env` 中 `DEFAULT_NEW_USER_PASSWORD`）。**重定向到文件时请用** `npm run -s provision-admin-sql` **或** `node --import tsx scripts/generate-provision-admin-sql.ts`，避免 `npm run` 默认把以 `>` 开头的行写入文件导致 SQL 语法错误；再用 **`npx prisma db execute --file ... --schema prisma/schema.prisma`** 或 `psql`（需已 `export DATABASE_URL`）执行；勿将含真实哈希的 SQL 提交到 Git。
   - **本地若 `admin` 登录 `CredentialsSignin`**：确认 `.env` 已配置 **`DEFAULT_NEW_USER_PASSWORD`**；库结构含 `ADMIN`/`adminId` 后 **`npm run db:seed`** 或执行生成的 SQL；登录用户名在服务端已 **统一小写**。

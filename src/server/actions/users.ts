@@ -64,6 +64,81 @@ export async function createManagerUser(formData: FormData) {
   revalidatePath("/dashboard/manager");
 }
 
+async function hashDefaultPassword() {
+  return bcrypt.hash(getDefaultNewUserPassword(), 10);
+}
+
+function assertResetConfirmed(formData: FormData) {
+  if (String(formData.get("confirmReset") || "") !== "1") {
+    throw new Error("请点击确认重置按钮后再提交。");
+  }
+}
+
+export async function resetSalesUserPassword(formData: FormData) {
+  const session = await requireManagerAction();
+  assertResetConfirmed(formData);
+
+  const userId = String(formData.get("userId") || "").trim();
+  if (!userId) {
+    throw new Error("请选择需要重置密码的销售账号。");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      role: "SALES",
+      managerId: session.user.id,
+    },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new Error("未找到该销售账号，或当前主管无权重置。");
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: await hashDefaultPassword(),
+      defaultPassword: true,
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+}
+
+export async function resetManagerUserPassword(formData: FormData) {
+  await requireAdminAction();
+  assertResetConfirmed(formData);
+
+  const userId = String(formData.get("userId") || "").trim();
+  if (!userId) {
+    throw new Error("请选择需要重置密码的主管账号。");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      role: "MANAGER",
+    },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new Error("未找到该主管账号，或当前管理员无权重置。");
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: await hashDefaultPassword(),
+      defaultPassword: true,
+    },
+  });
+
+  revalidatePath("/dashboard/manager");
+}
+
 export type ChangePasswordResult = { ok: true } | { ok: false; error: string };
 
 /**

@@ -1,8 +1,14 @@
 import { redirect } from "next/navigation";
 import { getDefaultNewUserPassword } from "@/config/default-credentials";
 import { getManagerOverview, requireManagerSession } from "@/features/crm/queries";
-import { createManagerUser, createSalesUser } from "@/server/actions/users";
+import {
+  createManagerUser,
+  createSalesUser,
+  resetManagerUserPassword,
+  resetSalesUserPassword,
+} from "@/server/actions/users";
 import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
+import { ConfirmSubmitButton } from "@/components/forms/confirm-submit-button";
 
 export default async function ManagerPage() {
   const session = await requireManagerSession();
@@ -23,6 +29,7 @@ export default async function ManagerPage() {
   const initialPasswordHint = getDefaultNewUserPassword();
 
   const isAdminView = data.view === "admin";
+  const resetCandidates = isAdminView ? data.managers : data.rawSalesUsers;
 
   return (
     <div className="space-y-6">
@@ -190,6 +197,48 @@ export default async function ManagerPage() {
                   创建主管账号
                 </button>
               </ActionFeedbackForm>
+              <div className="mt-8 border-t border-slate-100 pt-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-600">重置主管密码</p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  选择一个主管后点击确认重置，密码会恢复为默认密码；该主管下次登录必须先修改密码。
+                </p>
+                <ActionFeedbackForm
+                  action={resetManagerUserPassword}
+                  className="mt-4"
+                  successMessage="主管密码已重置为默认密码。"
+                >
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                    name="userId"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>
+                      选择需要重置的主管
+                    </option>
+                    {resetCandidates.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}（{user.username}）
+                      </option>
+                    ))}
+                  </select>
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-relaxed text-rose-900">
+                    重置后默认密码为{" "}
+                    <code className="rounded-md bg-white px-2 py-0.5 font-mono font-semibold ring-1 ring-rose-200/80">
+                      {initialPasswordHint}
+                    </code>
+                    ，请通过安全渠道单独告知。
+                  </div>
+                  <ConfirmSubmitButton
+                    className="w-full rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                    confirmMessage="确认后该主管密码会恢复为默认密码，下次登录必须修改密码。"
+                    disabled={!resetCandidates.length}
+                    name="confirmReset"
+                    value="1"
+                  >
+                    重置密码
+                  </ConfirmSubmitButton>
+                </ActionFeedbackForm>
+              </div>
             </>
           ) : (
             <>
@@ -216,6 +265,48 @@ export default async function ManagerPage() {
                   创建销售账号
                 </button>
               </ActionFeedbackForm>
+              <div className="mt-8 border-t border-slate-100 pt-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-600">重置销售密码</p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  选择一个直属销售后点击确认重置，密码会恢复为默认密码；该销售下次登录必须先修改密码。
+                </p>
+                <ActionFeedbackForm
+                  action={resetSalesUserPassword}
+                  className="mt-4"
+                  successMessage="销售密码已重置为默认密码。"
+                >
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                    name="userId"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>
+                      选择需要重置的销售
+                    </option>
+                    {resetCandidates.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}（{user.username}）
+                      </option>
+                    ))}
+                  </select>
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-relaxed text-rose-900">
+                    重置后默认密码为{" "}
+                    <code className="rounded-md bg-white px-2 py-0.5 font-mono font-semibold ring-1 ring-rose-200/80">
+                      {initialPasswordHint}
+                    </code>
+                    ，请通过安全渠道单独告知。
+                  </div>
+                  <ConfirmSubmitButton
+                    className="w-full rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                    confirmMessage="确认后该销售密码会恢复为默认密码，下次登录必须修改密码。"
+                    disabled={!resetCandidates.length}
+                    name="confirmReset"
+                    value="1"
+                  >
+                    重置密码
+                  </ConfirmSubmitButton>
+                </ActionFeedbackForm>
+              </div>
             </>
           )}
         </article>
