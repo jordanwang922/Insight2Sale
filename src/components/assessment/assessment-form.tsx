@@ -8,6 +8,10 @@ import { phonePattern } from "@/lib/validation";
 
 const allQuestions = [...coreQuestions, ...anxietyQuestions, ...burnoutQuestions, ...competenceQuestions];
 
+export function displayAssessmentOptionLabel(label: string) {
+  return label.replace(/\s*[（(]\s*\d+\s*分\s*[）)]\s*$/u, "").trim();
+}
+
 export function AssessmentForm({ templateSlug }: { templateSlug?: string }) {
   const [step, setStep] = useState<"intake" | "questions">("intake");
   const [selected, setSelected] = useState<Record<number, string>>({});
@@ -147,7 +151,7 @@ export function AssessmentForm({ templateSlug }: { templateSlug?: string }) {
                         type="radio"
                         value={JSON.stringify({ label: option.label, score: option.score })}
                       />
-                      <span>{option.label}</span>
+                      <span>{displayAssessmentOptionLabel(option.label)}</span>
                     </label>
                   );
                 })}

@@ -23,6 +23,16 @@
 
 ## 当前记录
 
+### 2026-05-09 测评选项隐藏分数
+
+- 本次目标：修复用户端测评页所有选项后直接显示 `（1分）/ (1分)` 的低级展示问题。
+- 完成内容：
+  - `AssessmentForm` 新增 `displayAssessmentOptionLabel`，展示时去掉选项 label 末尾的中文/英文括号分数。
+  - 仅改变页面展示；表单提交仍保留原始 `option.label` 与 `option.score`，不影响计分、报告、历史测试。
+  - 新增单测覆盖中文括号和英文括号两种分数后缀。
+- 影响文件：`src/components/assessment/assessment-form.tsx`、`tests/assessment/assessment-form.test.tsx`
+- 验证情况：`npm test -- tests/assessment/assessment-form.test.tsx tests/assessment/report.test.ts tests/assessment/word-scoring-boundaries.test.ts` 通过；`npm run build` 通过；`git diff --check` 通过。日志未超过 500 行，无需归档。
+
 ### 2026-05-02 账号默认密码重置
 
 - 本次目标：在 **主管总览** 的新增账号卡片下增加密码重置能力；主管可重置直属销售，管理员可重置主管；被重置账号下次登录必须修改密码。
