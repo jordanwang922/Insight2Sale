@@ -9,6 +9,7 @@ import {
   LibraryBig,
   DatabaseZap,
   ClipboardList,
+  PieChart,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { isManagerOrAdmin } from "@/lib/role-access";
@@ -19,6 +20,7 @@ const links = [
   { href: "/dashboard/calendar", label: "预约日历", icon: CalendarDays },
   { href: "/dashboard/call-recordings", label: "通话管理", icon: PhoneCall },
   { href: "/dashboard/manager", label: "主管总览", icon: BarChart3 },
+  { href: "/dashboard/assessment-statistics", label: "测评表统计", icon: PieChart },
   { href: "/dashboard/assessments", label: "测评表管理", icon: ClipboardList },
   { href: "/dashboard/knowledge", label: "知识库管理", icon: DatabaseZap },
   { href: "/dashboard/templates", label: "模板管理", icon: LibraryBig },
@@ -34,6 +36,7 @@ export async function DashboardSidebar() {
           (link) =>
             ![
               "/dashboard/manager",
+              "/dashboard/assessment-statistics",
               "/dashboard/assessments",
               "/dashboard/knowledge",
               "/dashboard/templates",

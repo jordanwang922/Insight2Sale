@@ -23,6 +23,21 @@
 
 ## 当前记录
 
+### 2026-05-12 22:58 测评表统计
+
+- 本次目标：在左侧菜单「主管总览」下新增「测评表统计」，支持按起止时间统计用户填写过的测评表画像字段，并用饼图展示。
+- 完成内容：
+  - 新增 `/dashboard/assessment-statistics` 页面，主管/管理员可选择开始时间和结束时间，点击 **统计** 后查看结果。
+  - 新增 `getAssessmentStatisticsData` 与 `buildAssessmentStatistics`：按 `AssessmentSubmission.submittedAt` 过滤，优先读取每张测评表的 `intakeData`，`Customer` 字段仅做历史兜底。
+  - 统计字段覆盖长期居住城市、会员情况、性别、年龄段、学历、孩子数量、孩子年龄段、育儿决策人数、日常照顾者、养育角色、职业类别；孩子年龄段按多选项逐项计数。
+  - 新增纯 CSS 饼图组件 `AssessmentStatPie`，不额外引入图表依赖。
+  - 侧边栏在「主管总览」下新增「测评表统计」入口，销售账号不可见。
+- 影响文件：`src/app/dashboard/assessment-statistics/page.tsx`、`src/features/crm/assessment-statistics.ts`、`src/features/crm/queries.ts`、`src/components/charts/assessment-stat-pie.tsx`、`src/components/dashboard/sidebar.tsx`、`tests/crm/assessment-statistics.test.ts`、`docs/design/system-design.md`、`docs/logs/handoff-log.md`
+- 验证情况：`npm test -- tests/crm/assessment-statistics.test.ts` 通过；`npm run build` 通过；`git diff --check` 通过。
+- 未完成项：暂无。
+- 风险 / 注意事项：旧版或历史问卷里若没有「育儿决策人数」，该项会计入 **未填写**。
+- 下一步建议：如后续要导出 Excel，可在同一查询结果上增加导出按钮，不需要变更统计口径。
+
 ### 2026-05-09 测评选项隐藏分数
 
 - 本次目标：修复用户端测评页所有选项后直接显示 `（1分）/ (1分)` 的低级展示问题。

@@ -9,6 +9,7 @@
 ## 当前状态（v1.2.0 + 管理员与组织 + 测评 Word v2）
 
 - **版本**：`package.json` → **1.2.0**；Git 发布 tag：**`v1.2.0`**（与 package 一致）；上一冻结 tag：**`v1.0.0`**。
+- **2026-05-12 测评表统计**：侧边栏在 **主管总览** 下新增 **测评表统计**（`/dashboard/assessment-statistics`）。主管/管理员可按提交日期起止筛选，统计时间范围内所有 `AssessmentSubmission` 的画像字段饼图：长期居住城市、会员情况、性别、年龄段、学历、孩子数量、孩子年龄段、育儿决策人数、日常照顾者、养育角色、职业类别。统计真源优先 `AssessmentSubmission.intakeData`，`Customer` 字段只做历史兜底；孩子年龄段多选会逐项计数。
 - **2026-05-09 测评选项展示**：用户端测评页选项不再显示末尾分数。实现为 `displayAssessmentOptionLabel` 只清洗展示文案，提交给服务端的原始 `option.label` 与 `option.score` 不变，避免影响计分和报告。
 - **2026-04-30 测评报告评分修正**
   - 第 **37-39 / 40-42 / 43-45** 题显示标签分别为 **家长的教育焦虑指数 / 家长的教育倦怠指数 / 家长的教养能力感**；这是 `questions.ts` 对生成题库的显示覆盖，避免 Word 生成文件里仍是 `需求`。
@@ -61,6 +62,7 @@
 | 会话与首次改密 | `src/auth.ts`（JWT 内同步 `defaultPassword`）、`src/app/dashboard/layout.tsx` |
 | 改密表单与自动跳转 | `src/components/forms/change-password-form.tsx` |
 | 创建销售 / 主管 | `src/server/actions/users.ts` → `createSalesUser` / `createManagerUser`；UI `src/app/dashboard/manager/page.tsx`（管理员与主管视图分支） |
+| 测评表统计 | `src/app/dashboard/assessment-statistics/page.tsx`、`src/features/crm/assessment-statistics.ts`、`getAssessmentStatisticsData()` |
 | 云端 provision admin | `npm run provision-admin-sql` → `scripts/generate-provision-admin-sql.ts`（须已应用含 `ADMIN`/`adminId` 的迁移）；说明见 `docs/sql/provision-admin.sql` |
 | 公网站点根 URL | `src/lib/public-site-url.ts` |
 | 快捷入口 | `src/components/dashboard/quick-actions.tsx` |

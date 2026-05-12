@@ -16,6 +16,7 @@ import { knowledgeCategories } from "@/features/knowledge/categories";
 import { categoryFromSlug } from "@/features/knowledge/category-slugs";
 import { callRecordingListWhere } from "@/features/crm/call-recording-access";
 import { isAdminRole, isManagerOrAdmin } from "@/lib/role-access";
+import { buildAssessmentStatistics } from "@/features/crm/assessment-statistics";
 
 const ownerPalette = ["#f59e0b", "#8b5cf6", "#10b981", "#0ea5e9", "#ef4444", "#f97316"];
 
@@ -595,6 +596,56 @@ export async function getAssessmentManagementData() {
   });
 
   return { templates };
+}
+
+export async function getAssessmentStatisticsData(params: { startDate: Date; endDate: Date }) {
+  const session = await requireManagerSession();
+  if (!session?.user?.id) return null;
+
+  const ownerWhere =
+    session.user.role === "ADMIN"
+      ? {}
+      : {
+          customer: {
+            owner: {
+              OR: [{ id: session.user.id }, { managerId: session.user.id }],
+            },
+          },
+        };
+
+  const submissions = await prisma.assessmentSubmission.findMany({
+    where: {
+      submittedAt: {
+        gte: params.startDate,
+        lte: params.endDate,
+      },
+      ...ownerWhere,
+    },
+    select: {
+      intakeData: true,
+      customer: {
+        select: {
+          residenceCity: true,
+          memberStatus: true,
+          gender: true,
+          ageRange: true,
+          education: true,
+          childrenCount: true,
+          childAgeRanges: true,
+          decisionMakerCount: true,
+          primaryCaretaker: true,
+          parentingRole: true,
+          occupationCategory: true,
+        },
+      },
+    },
+    orderBy: { submittedAt: "desc" },
+  });
+
+  return {
+    totalSubmissions: submissions.length,
+    groups: buildAssessmentStatistics(submissions),
+  };
 }
 
 async function loadAdminOrganizationOverview() {
