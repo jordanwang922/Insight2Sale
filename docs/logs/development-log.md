@@ -23,6 +23,19 @@
 
 ## 当前记录
 
+### 2026-05-12 23:19 解读台浮动雷达移到右侧
+
+- 本次目标：按验收截图，将滚动后出现的黑色浮动雷达框从左侧移到右侧，出现时机保持不变。
+- 完成内容：
+  - `CustomerWorkspaceRadars` 保留原 `IntersectionObserver` 触发逻辑和 `hasPassedInlineRadar` 条件。
+  - 浮动雷达定位由左侧菜单区域改为屏幕右侧固定定位：桌面右侧 24px、窄屏右侧 16px。
+  - 更新交接日志中的浮动雷达规则，避免后续误改回左侧。
+- 影响文件：`src/components/dashboard/customer-workspace-radars.tsx`、`docs/logs/handoff-log.md`
+- 验证情况：`npm test -- tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+- 未完成项：暂无。
+- 风险 / 注意事项：浮窗仍是覆盖式固定定位，若后续右侧内容遮挡严重，可再增加桌面端右侧安全边距或可关闭按钮。
+- 下一步建议：用真实客户解读台页面滚动验收浮窗出现位置。
+
 ### 2026-05-12 22:58 测评表统计
 
 - 本次目标：在左侧菜单「主管总览」下新增「测评表统计」，支持按起止时间统计用户填写过的测评表画像字段，并用饼图展示。

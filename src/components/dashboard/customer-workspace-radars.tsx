@@ -14,7 +14,7 @@ interface CustomerWorkspaceRadarsProps {
 }
 
 /**
- * 解读工作台：主内容区一张合并雷达（孩子+家长同色叠加）；滚动离开视口后在左侧固定紧凑版。
+ * 解读工作台：主内容区一张合并雷达（孩子+家长同色叠加）；滚动离开视口后在右侧固定紧凑版。
  */
 export function CustomerWorkspaceRadars({
   childRadar,
@@ -24,19 +24,16 @@ export function CustomerWorkspaceRadars({
   const inlineAnchorRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [docked, setDocked] = useState(false);
-  const [dockBox, setDockBox] = useState({ left: 16, width: 240 });
+  const [dockBox, setDockBox] = useState({ right: 16, width: 240 });
   const [hasPassedInlineRadar, setHasPassedInlineRadar] = useState(false);
 
   const updateDockPosition = useCallback(() => {
     const xl = window.matchMedia("(min-width: 1280px)").matches;
-    const aside = document.querySelector<HTMLElement>("[data-dashboard-sidebar]");
-    if (xl && aside && aside.offsetWidth > 0) {
-      const r = aside.getBoundingClientRect();
-      const pad = 6;
-      setDockBox({ left: r.left + pad, width: Math.max(190, Math.min(230, r.width - pad * 2)) });
+    if (xl) {
+      setDockBox({ right: 24, width: 230 });
     } else {
       const w = Math.min(230, Math.max(190, Math.floor(window.innerWidth * 0.44)));
-      setDockBox({ left: 16, width: w });
+      setDockBox({ right: 16, width: w });
     }
   }, []);
 
@@ -79,7 +76,7 @@ export function CustomerWorkspaceRadars({
         style={{
           position: "fixed",
           top: "4.5rem",
-          left: dockBox.left,
+          right: dockBox.right,
           width: dockBox.width,
           zIndex: 50,
         }}
