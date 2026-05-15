@@ -19,6 +19,7 @@ export interface AssessmentReportSharePanelProps {
   fileNameBase?: string;
   parentTypeSummary?: string | null;
   parentTypePracticeSections?: AssessmentReportPracticeSection[];
+  assessmentReviewHref?: string | null;
 }
 
 export function AssessmentReportSharePanel({
@@ -29,6 +30,7 @@ export function AssessmentReportSharePanel({
   fileNameBase = "智慧父母测评报告",
   parentTypeSummary,
   parentTypePracticeSections = [],
+  assessmentReviewHref,
 }: AssessmentReportSharePanelProps) {
   const captureRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -85,6 +87,16 @@ export function AssessmentReportSharePanel({
         >
           {busy ? "正在生成图片…" : "保存分享长图（PNG）"}
         </button>
+        {assessmentReviewHref ? (
+          <a
+            href={assessmentReviewHref}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+          >
+            打开用户测评表
+          </a>
+        ) : null}
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </div>
       <p className="text-xs leading-relaxed text-slate-500">

@@ -23,6 +23,20 @@
 
 ## 当前记录
 
+### 2026-05-15 21:12 解读台新增“打开用户测评表”
+
+- 本次目标：在解读台“保存分享长图（PNG）”按钮后增加“打开用户测评表”，新窗口展示该客户最近一次测评的完整作答内容。
+- 完成内容：
+  - `AssessmentReportSharePanel` 新增可选 `assessmentReviewHref`，在分享长图按钮后渲染 **打开用户测评表**，以新窗口打开。
+  - 新增 `/dashboard/customers/[customerId]/assessment-review` 页面，展示最近一次 `AssessmentSubmission` 的基础采集信息与 45 道题逐题作答。
+  - 新增 `buildAssessmentReviewQuestions` 与 `buildAssessmentReviewIntake`，从 `answersData` / `intakeData` 还原测评表；指数题内部 id 虽为 `100/200/300` 段，页面展示序号仍按用户视角显示为第 37-45 题。
+  - `getCustomerAssessmentReview` 复用现有客户权限规则：主管/管理员可看团队范围，销售仅可看自己客户。
+- 影响文件：`src/components/assessment/assessment-report-share-panel.tsx`、`src/app/dashboard/customers/[customerId]/page.tsx`、`src/app/dashboard/customers/[customerId]/assessment-review/page.tsx`、`src/features/assessment/review.ts`、`src/features/crm/queries.ts`、`tests/assessment/review.test.ts`、`docs/logs/handoff-log.md`
+- 验证情况：`npm test -- tests/assessment/review.test.ts tests/components/radar-chart-card.test.tsx` 通过；`npm run build` 通过；`git diff --check` 通过。
+- 未完成项：暂无。
+- 风险 / 注意事项：当前回看页读取的是**最近一次**测评提交；如果同一客户反复重做，默认只展示最新那份。
+- 下一步建议：如后续需要看历史版本，可再加“切换提交记录”下拉或时间轴。
+
 ### 2026-05-12 23:19 解读台浮动雷达移到右侧
 
 - 本次目标：按验收截图，将滚动后出现的黑色浮动雷达框从左侧移到右侧，出现时机保持不变。

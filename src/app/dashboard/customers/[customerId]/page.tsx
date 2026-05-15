@@ -106,6 +106,9 @@ export default async function CustomerWorkspacePage({
     data.customer.assessments[0]?.template?.slug != null
       ? `/assessment/${data.customer.assessments[0].template.slug}`
       : "/assessment";
+  const assessmentReviewHref = data.customer.assessments[0]
+    ? `/dashboard/customers/${data.customer.id}/assessment-review`
+    : null;
   const siteUrl = await getPublicSiteUrl();
   const assessmentAbsoluteUrl = siteUrl ? `${siteUrl}${assessmentHref}` : "";
 
@@ -275,6 +278,7 @@ export default async function CustomerWorkspacePage({
             </p>
             <div className="mt-4">
               <AssessmentReportSharePanel
+                assessmentReviewHref={assessmentReviewHref}
                 nickname={data.customer.wechatNickname}
                 report={report}
                 childRadar={data.childRadar}

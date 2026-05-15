@@ -6,6 +6,7 @@ import { toRadarData } from "@/features/assessment/report";
 import { AssessmentReport } from "@/features/assessment/types";
 import { normalizeAssessmentReport } from "@/features/assessment/report-normalize";
 import { buildMonthCalendar } from "@/features/crm/calendar";
+import { buildAssessmentReviewIntake, buildAssessmentReviewQuestions } from "@/features/assessment/review";
 import { buildKbWorkspaceInterpretation } from "@/features/knowledge/interpretation-lookup";
 import {
   retrieveKnowledge,
@@ -362,6 +363,47 @@ export async function getCustomerWorkspace(
       interpretationDeskTemplate,
     },
     kbWorkspaceInterpretation,
+  };
+}
+
+export async function getCustomerAssessmentReview(customerId: string) {
+  const session = await requireSession();
+  if (!session?.user?.id) return null;
+
+  const customer = await prisma.customer.findUnique({
+    where: { id: customerId },
+    include: {
+      owner: true,
+      assessments: {
+        orderBy: { submittedAt: "desc" },
+        take: 1,
+        include: { template: true },
+      },
+    },
+  });
+
+  if (!customer) return null;
+  if (!isManagerOrAdmin(session.user.role) && customer.ownerId !== session.user.id) {
+    return null;
+  }
+
+  const submission = customer.assessments[0];
+  if (!submission) {
+    return {
+      session,
+      customer,
+      submission: null,
+      intakeItems: [],
+      reviewQuestions: [],
+    };
+  }
+
+  return {
+    session,
+    customer,
+    submission,
+    intakeItems: buildAssessmentReviewIntake(submission.intakeData),
+    reviewQuestions: buildAssessmentReviewQuestions(submission.answersData),
   };
 }
 
