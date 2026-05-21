@@ -120,7 +120,9 @@ export async function parseDealKitOcr(
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const parsed = buffer.length ? await recognizeDealKitImage(buffer) : parseDealKitStructuredText("");
+    const parsed = buffer.length
+      ? await recognizeDealKitImage(buffer, file.type || "image/png")
+      : parseDealKitStructuredText("");
     if (!parsed.profileText && !parsed.judgmentText && !parsed.experienceText) {
       return {
         status: "error",

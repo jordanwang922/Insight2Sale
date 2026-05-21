@@ -23,6 +23,29 @@
 
 ## 当前记录
 
+### 2026-05-21 16:36 成交锦囊 OCR 切换到豆包图片识别
+
+- 本次目标：按你的要求，把 `成交锦囊` 的截图 OCR 从本地方案改成直接走豆包 OCR / 视觉模型，并重新部署到服务器。
+- 完成内容：
+  - `src/features/deal-kit/ocr.ts` 删除了本地 `Tesseract` 主识别链路，`recognizeDealKitImage` 现在直接调用豆包图片识别接口读取截图内容。
+  - 新增 `generateDoubaoImageJson`，通过方舟 `chat/completions` 多模态消息格式把图片以 data URL 发送给豆包，并要求直接返回 `贡献人 / 用户画像 / 用户判断 / 成交经验 / rawText` 的 JSON。
+  - OCR 识别后仍保留“结构化校正”这一步：如果豆包直接返回的字段不完整，会再基于 `rawText` 做一次规则解析和 AI 结构化补齐，但不会再退回本地 OCR。
+  - `parseDealKitOcr` 会把上传文件的真实 `mimeType` 传入豆包识别，避免默认一律当成 PNG。
+  - `.env.example` 增加可选变量 `ARK_OCR_MODEL`，便于后续单独指定豆包 OCR / 视觉接入点；未配置时默认沿用 `ARK_MODEL`。
+- 影响文件：
+  - `src/lib/ai/doubao.ts`
+  - `src/features/deal-kit/ocr.ts`
+  - `src/server/actions/deal-kit.ts`
+  - `.env.example`
+- 验证情况：
+  - `npm test -- tests/deal-kit/ocr.test.ts tests/promotion-copy/generation.test.ts tests/deal-kit/entry.test.ts`
+  - `npm run build`
+- 未完成项：无。
+- 风险 / 注意事项：
+  - 如果生产环境要把 OCR 单独切到专用豆包视觉接入点，需要在服务器环境变量里补 `ARK_OCR_MODEL` 后重启；不配时继续使用当前 `ARK_MODEL`。
+  - 这次只移除了 `成交锦囊` 的本地 OCR；知识库 PDF OCR 仍是另一个独立链路，没有动。
+- 下一步建议：上线后优先复测你之前那类群聊截图，确认字段提取质量是否已经达到预期。
+
 ### 2026-05-21 16:28 成交锦囊 / 推广文案问题修复
 
 - 本次目标：修复你刚刚验收时发现的 5 个问题，包括成交锦囊顶部文案过早换行、手工保存报错、OCR 没识别到字段、推广文案配图被裁切、轻改版生成后与原文完全一致。
