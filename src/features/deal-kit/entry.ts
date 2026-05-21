@@ -1,5 +1,6 @@
 import { embedText, rankKnowledgeChunks } from "@/features/knowledge/rag";
 import {
+  LOCAL_EMBEDDING_MODEL_LABEL,
   embedTextsWithArk,
   getActiveEmbeddingModelLabel,
   isArkSemanticEmbeddingConfigured,
@@ -29,11 +30,18 @@ export function buildDealKitSemanticText(input: DealKitEntryInput) {
 export async function embedDealKitText(semanticText: string) {
   const clean = semanticText.trim() || "成交锦囊";
   if (isArkSemanticEmbeddingConfigured()) {
-    const vectors = await embedTextsWithArk([clean]);
-    return {
-      embeddingJson: JSON.stringify(vectors[0] ?? []),
-      embeddingModel: getActiveEmbeddingModelLabel(),
-    };
+    try {
+      const vectors = await embedTextsWithArk([clean]);
+      return {
+        embeddingJson: JSON.stringify(vectors[0] ?? []),
+        embeddingModel: getActiveEmbeddingModelLabel(),
+      };
+    } catch {
+      return {
+        embeddingJson: JSON.stringify(embedText(clean)),
+        embeddingModel: LOCAL_EMBEDDING_MODEL_LABEL,
+      };
+    }
   }
 
   return {

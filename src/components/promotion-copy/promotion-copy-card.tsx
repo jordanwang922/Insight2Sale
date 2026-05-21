@@ -57,11 +57,13 @@ export function PromotionCopyCard({
                 href={`/api/promotion-copies/images/${promotionCopyId}/${index}`}
                 target="_blank"
               >
-                <img
-                  alt={asset.fileName || `推广文案配图 ${index + 1}`}
-                  className="h-36 w-full object-cover"
-                  src={`/api/promotion-copies/images/${promotionCopyId}/${index}`}
-                />
+                <div className="bg-white p-2">
+                  <img
+                    alt={asset.fileName || `推广文案配图 ${index + 1}`}
+                    className="max-h-[32rem] w-full object-contain"
+                    src={`/api/promotion-copies/images/${promotionCopyId}/${index}`}
+                  />
+                </div>
                 <div className="px-3 py-2 text-xs text-slate-600">{asset.fileName || `图片 ${index + 1}`}</div>
               </a>
             ))}

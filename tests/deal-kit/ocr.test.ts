@@ -15,4 +15,18 @@ describe("deal kit OCR parser", () => {
     expect(parsed.judgmentText).toContain("担心孩子再继续沉迷");
     expect(parsed.experienceText).toContain("最后先试一试");
   });
+
+  test("tolerates spaced labels and alternate contributor lines", () => {
+    const parsed = parseDealKitStructuredText(`
+田老师团队主管
+用 户 画 像：学员“久月”是一位妈妈，9岁男孩，沉迷手机和游戏。
+用 户 判 断：妈妈学过很多课程，但还没看到实质改变，现在最担心孩子学不会。
+成 交 经 验：先解决她对效果和经济压力的顾虑，再把试听和实践性讲清楚。
+`);
+
+    expect(parsed.contributorName).toBe("田老师团队主管");
+    expect(parsed.profileText).toContain("沉迷手机和游戏");
+    expect(parsed.judgmentText).toContain("最担心孩子学不会");
+    expect(parsed.experienceText).toContain("试听和实践性");
+  });
 });

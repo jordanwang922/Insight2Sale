@@ -19,7 +19,7 @@ export default async function DealKitsPage({
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-600">成交锦囊</p>
         <h1 className="mt-4 text-2xl font-semibold text-slate-950 sm:text-3xl">把别人已经成交过的经验，变成你现在就能用的话术</h1>
-        <p className="mt-4 max-w-4xl text-sm leading-7 text-slate-600">
+        <p className="mt-4 text-sm leading-7 text-slate-600">
           销售在电话里常见的卡点，不需要从零想。直接把当前问题输进来，系统会按语义找出以前谁也遇到过这个问题、当时是怎么判断、怎么推进、怎么成交的。
         </p>
         <form className="mt-6 grid gap-3 md:grid-cols-[1fr_auto]" method="get">

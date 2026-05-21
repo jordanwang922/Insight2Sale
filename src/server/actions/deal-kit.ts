@@ -89,15 +89,22 @@ export async function createDealKitEntry(formData: FormData) {
     throw new Error("请把贡献人、用户画像、用户判断和成交经验都填写完整。");
   }
 
-  await persistDealKitEntry({
-    input: { profileText, judgmentText, experienceText },
-    contributorName,
-    recorderId: session.user.id,
-    sourceType,
-    metadata: rawText ? { rawText } : undefined,
-  });
+  try {
+    await persistDealKitEntry({
+      input: { profileText, judgmentText, experienceText },
+      contributorName,
+      recorderId: session.user.id,
+      sourceType,
+      metadata: rawText ? { rawText } : undefined,
+    });
 
-  revalidatePath("/dashboard/deal-kits");
+    revalidatePath("/dashboard/deal-kits");
+  } catch (error) {
+    if (error instanceof Error && /请把贡献人|权限|登录/u.test(error.message)) {
+      throw error;
+    }
+    throw new Error("成交锦囊保存失败，请稍后再试。");
+  }
 }
 
 export async function parseDealKitOcr(
@@ -114,6 +121,13 @@ export async function parseDealKitOcr(
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = buffer.length ? await recognizeDealKitImage(buffer) : parseDealKitStructuredText("");
+    if (!parsed.profileText && !parsed.judgmentText && !parsed.experienceText) {
+      return {
+        status: "error",
+        message: "这张截图里没有识别出用户画像、用户判断或成交经验，请换一张更清晰的截图再试。",
+        rawText: parsed.rawText,
+      };
+    }
     return {
       status: "success",
       contributorName: parsed.contributorName,
