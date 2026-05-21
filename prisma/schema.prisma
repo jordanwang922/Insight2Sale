@@ -38,6 +38,13 @@ model User {
   knowledgeDocuments KnowledgeDocument[]
   assessmentTemplates AssessmentTemplate[]
   callRecordings CallRecording[]
+  contributedDealKitEntries DealKitEntry[] @relation("DealKitContributor")
+  recordedDealKitEntries DealKitEntry[] @relation("DealKitRecorder")
+  dealKitSearchHits DealKitSearchHit[]
+  dealKitScriptGenerations DealKitScriptGeneration[]
+  promotionCopies PromotionCopy[] @relation("PromotionCreator")
+  promotionScopedCopies PromotionCopy[] @relation("PromotionScopeManager")
+  promotionCopyGenerations PromotionCopyGeneration[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -360,4 +367,102 @@ model CallRecording {
 
   @@index([ownerId, createdAt])
   @@index([customerId, createdAt])
+}
+
+model DealKitEntry {
+  id                    String   @id @default(cuid())
+  contributorId         String?
+  contributor           User?    @relation("DealKitContributor", fields: [contributorId], references: [id], onDelete: SetNull)
+  contributorName       String
+  recorderId            String
+  recorder              User     @relation("DealKitRecorder", fields: [recorderId], references: [id], onDelete: Cascade)
+  profileText           String
+  judgmentText          String
+  experienceText        String
+  sourceType            String   @default("manual")
+  status                String   @default("published")
+  tagsJson              String   @default("[]")
+  metadataJson          String   @default("{}")
+  semanticText          String
+  embeddingJson         String
+  embeddingModel        String
+  searchExposureCount   Int      @default(0)
+  citationCount         Int      @default(0)
+  conversionAssistCount Int      @default(0)
+  searchHits            DealKitSearchHit[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([contributorId, createdAt])
+  @@index([recorderId, createdAt])
+  @@index([embeddingModel])
+  @@index([searchExposureCount, citationCount, conversionAssistCount])
+}
+
+model DealKitSearchHit {
+  id        String       @id @default(cuid())
+  entryId    String
+  entry      DealKitEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  viewerId   String
+  viewer     User         @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  query      String
+  score      Float
+  createdAt  DateTime     @default(now())
+
+  @@index([entryId, createdAt])
+  @@index([viewerId, createdAt])
+}
+
+model DealKitScriptGeneration {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query            String
+  generatedScript  String
+  entryIdsJson     String
+  successMarkedAt  DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([successMarkedAt])
+}
+
+model PromotionCopy {
+  id                  String   @id @default(cuid())
+  title               String
+  content             String
+  eventDate           DateTime
+  scope               String   @default("team")
+  enabled             Boolean  @default(true)
+  createdById         String
+  createdBy           User     @relation("PromotionCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  teamScopeManagerId  String?
+  teamScopeManager    User?    @relation("PromotionScopeManager", fields: [teamScopeManagerId], references: [id], onDelete: SetNull)
+  imageAssetsJson     String   @default("[]")
+  imageStorageProvider String?
+  metadataJson        String   @default("{}")
+  generations         PromotionCopyGeneration[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([eventDate, enabled])
+  @@index([scope, eventDate])
+  @@index([createdById, eventDate])
+  @@index([teamScopeManagerId, eventDate])
+}
+
+model PromotionCopyGeneration {
+  id               String   @id @default(cuid())
+  promotionCopyId  String
+  promotionCopy    PromotionCopy @relation(fields: [promotionCopyId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedTitle   String
+  generatedContent String
+  createdAt        DateTime @default(now())
+
+  @@index([promotionCopyId, createdAt])
+  @@index([userId, createdAt])
 }

@@ -9,6 +9,24 @@
 ## 当前状态（v1.2.0 + 管理员与组织 + 测评 Word v2）
 
 - **版本**：`package.json` → **1.2.0**；Git 发布 tag：**`v1.2.0`**（与 package 一致）；上一冻结 tag：**`v1.0.0`**。
+- **2026-05-21 成交锦囊**：新增 `/dashboard/deal-kits`，所有角色可见。支持：
+  - 手工录入 `用户画像 / 用户判断 / 成交经验 / 贡献人`
+  - 主管 / 管理员截图 OCR 识别后人工确认入库
+  - 自然语言语义搜索（复用方舟 Embedding / 本地哈希降级）
+  - 最多勾选 3 条经验生成成交话术
+  - 复制话术、点击 **通过这个话术成交**
+  - 指标拆分为 **曝光次数 / 被引用次数 / 成交助攻次数**
+  - 页面内同步展示曝光榜、引用榜、助攻榜、最近新增
+- **2026-05-21 推广文案**：新增 `/dashboard/promotion-copies`，所有角色可见。支持：
+  - 月历按天显示文案条数
+  - 手机端优先显示“有内容的日期列表 + 当天文案”，避免直接在 7 列小月历里高密度点选
+  - 主管录入的文案只给自己团队销售可见
+  - 管理员录入的文案为全员可见
+  - 主管 / 管理员可直接修改标题、正文、日期，替换或清空图片，并删除整条文案
+  - 销售对任意可见文案生成轻改版并一键复制
+  - 同一销售对同一条文案每天最多生成 5 次
+  - 支持多图上传，图片直接保存在服务器本地 `storage/promotion-copy-images/`，通过受权限控制的 `/api/promotion-copies/images/[id]/[index]` 读取
+- **2026-05-21 成交锦囊手机端**：搜索结果区、勾选框、生成按钮和标题层级已按窄屏优化；核心使用场景是销售手机端边通话边搜，所以默认保持单列大按钮、较大勾选点击区和更短的信息层级。
 - **2026-05-12 测评表统计**：侧边栏在 **主管总览** 下新增 **测评表统计**（`/dashboard/assessment-statistics`）。主管/管理员可按提交日期起止筛选，统计时间范围内所有 `AssessmentSubmission` 的画像字段饼图：长期居住城市、会员情况、性别、年龄段、学历、孩子数量、孩子年龄段、育儿决策人数、日常照顾者、养育角色、职业类别。统计真源优先 `AssessmentSubmission.intakeData`，`Customer` 字段只做历史兜底；孩子年龄段多选会逐项计数。
 - **2026-05-15 用户测评表回看**：解读台“报告长图”区在 **保存分享长图（PNG）** 后新增 **打开用户测评表** 按钮，打开 `/dashboard/customers/[customerId]/assessment-review` 新窗口。页面读取该客户最近一次 `AssessmentSubmission`，展示基础采集信息与 45 道题逐题作答，题目顺序按用户实际问卷的 1-45 显示，特殊指数题虽内部 id 为 `100/200/300` 段，展示序号仍是 37-45。
 - **2026-05-09 测评选项展示**：用户端测评页选项不再显示末尾分数。实现为 `displayAssessmentOptionLabel` 只清洗展示文案，提交给服务端的原始 `option.label` 与 `option.score` 不变，避免影响计分和报告。
@@ -69,6 +87,11 @@
 | 快捷入口 | `src/components/dashboard/quick-actions.tsx` |
 | 方舟知识库向量 | `src/lib/ai/ark-embedding.ts`、`src/features/knowledge/ingestion.ts`、`retrieval.ts` |
 | 全量重算向量 | `npm run db:reembed-knowledge`、`scripts/reembed-knowledge-embeddings.ts` |
+| 成交锦囊页面 | `src/app/dashboard/deal-kits/page.tsx`、`src/features/deal-kit/queries.ts`、`src/server/actions/deal-kit.ts` |
+| 成交锦囊 OCR / 标签 / 话术 | `src/features/deal-kit/ocr.ts`、`entry.ts`、`src/components/deal-kit/*` |
+| 推广文案页面 | `src/app/dashboard/promotion-copies/page.tsx`、`src/features/promotion-copy/queries.ts`、`calendar.ts` |
+| 推广文案生成 | `src/server/actions/promotion-copy.ts`、`src/features/promotion-copy/generation.ts`、`src/components/promotion-copy/promotion-copy-card.tsx` |
+| 推广文案图片本地存储 | `src/features/promotion-copy/storage.ts`、`src/features/promotion-copy/access.ts`、`src/app/api/promotion-copies/images/[id]/[index]/route.ts` |
 | 豆包语音 ASR | `src/lib/ai/doubao-speech.ts` |
 | 通话 API | `src/app/api/call-recordings/**` |
 | 矩阵列/行抽取 | `src/features/knowledge/parent-type-matrix.ts` |
@@ -99,6 +122,7 @@
 1. **部署与上线**：**`docs/deployment/SERVER_DEPLOYMENT.md`**（路径 **`/var/www/crm001/Insight2Sale`**、`git pull`、`npm ci`、`migrate deploy`、build、PM2、Nginx）；**`storage/`** 持久化；**`residenceCity`** 见上文「生产库」。
 2. **验收**：首次改密全链路、快捷入口链接在 HTTPS 公网域名下是否正确。
 3. **知识库**：生产配置 Embedding 接入点后按需 **`npm run db:reembed-knowledge`**。
+4. **成交锦囊 / 推广文案上线前**：数据库需应用迁移 `20260521103000_deal_kit_and_promotion_copy`；若生产未跑迁移，这两个新页面会因缺表不可用。
 
 ---
 
@@ -108,4 +132,8 @@
 - 矩阵表头命名若与 9 型不一致，需扩展映射。
 - 豆包 / 方舟超时或失败时关注日志与 `processingError`。
 - **知识库**：未配置 `ARK_EMBEDDING_MODEL` 时检索为本地哈希；切换模型后须重算或保证 `embeddingModel` 一致。
+- **成交锦囊**：搜索曝光次数会随着搜索刷新继续累计，后续榜单解释时要和引用 / 成交助攻分开看。
+- **成交锦囊 OCR**：识别质量受截图清晰度影响，必须人工确认后保存。
+- **推广文案图片**：依赖服务器本地 `storage/promotion-copy-images/` 持久化；部署时务必保留 `storage/` 目录。
+- **推广文案**：未配置 `ARK_*` 时轻改写走保守 fallback，只做小幅改动。
 - **多服务同机**：本机 `3000` 被占用时 dev 用 **3001**，勿与 `AUTH_URL` 不一致。

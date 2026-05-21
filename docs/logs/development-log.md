@@ -23,6 +23,44 @@
 
 ## 当前记录
 
+### 2026-05-21 15:46 成交锦囊与推广文案
+
+- 本次目标：新增全角色可见的 **成交锦囊** 与 **推广文案** 两个模块；先补设计文档，再完成数据模型、页面、语义搜索、OCR 录入、话术生成、推广文案日历与轻改写复制。
+- 完成内容：
+  - 设计文档新增 **§29 成交锦囊** 与 **§30 推广文案**：明确了定位、权限、页面结构、数据模型、语义搜索 / RAG、OCR 确认流、推广文案团队 / 全局可见范围，以及移动端使用要求。
+  - Prisma 新增 `DealKitEntry`、`DealKitSearchHit`、`DealKitScriptGeneration`、`PromotionCopy`、`PromotionCopyGeneration` 五张表，并补迁移 `prisma/migrations/20260521103000_deal_kit_and_promotion_copy/`。
+  - 侧边栏新增 **成交锦囊**（`/dashboard/deal-kits`）与 **推广文案**（`/dashboard/promotion-copies`）入口，两个模块全部角色都可见。
+  - **成交锦囊**：
+    - 支持自然语言语义搜索，复用方舟 Embedding / 本地哈希降级链路；结果按 **语义相关度 + 成交助攻 + 引用次数** 混排。
+    - 支持手工录入：字段为贡献人、用户画像、用户判断、成交经验；保存时自动生成标签与语义向量。
+    - 支持主管 / 管理员截图 OCR 录入：先识别并抽取结构化字段，再人工确认后入库；OCR 用 `tesseract.js`。
+    - 支持从搜索结果中最多勾选 3 条经验生成成交话术；生成后可复制，并可由实际使用的销售点击 **通过这个话术成交**。
+    - 指标拆分为 **曝光次数 / 被引用次数 / 成交助攻次数**，页面内同步展示三类排行榜与最近新增。
+  - **推广文案**：
+    - 新增月历视图，按天显示文案条数；点击某天可查看当天所有文案。
+    - 主管可录入只给自己团队看的文案；管理员录入的文案为全员可见。
+    - 已补齐 CRUD：主管 / 管理员可在当天文案卡片内直接修改标题、正文、日期，替换或清空图片，并删除整条文案。
+    - 销售可对任意可见文案生成“轻改版”，目的仅是避免平台同文案折叠；保留原意和结构，不做大改写。
+    - 每个销售对同一条文案每天最多生成 5 次；生成结果支持一键复制标题 + 正文。
+    - 支持多图上传；图片直接保存到服务器本地 `storage/promotion-copy-images/`，并通过受权限控制的图片路由展示 / 打开。
+    - 补做手机端适配：手机端不再强依赖 7 列月历选日期，而是优先展示“可点的日期列表 + 当天文案”；卡片标题、图片网格、编辑区和点击目标同步按窄屏压缩和放大。
+  - **手机端体验检查**：
+    - `推广文案` 手机端优先查看有内容的日期列表，减少月历小格子误触。
+    - `成交锦囊` 搜索结果区改为更适合手机的标题层级、选中提示与更大的勾选框；生成结果区按钮在窄屏下保持单列大按钮。
+  - 新增测试覆盖：成交锦囊语义拼装 / fallback 话术、OCR 结构提取、推广文案 fallback 轻改写。
+- 影响文件：`DOCS/design/system-design.md`、`prisma/schema.prisma`、`prisma/migrations/20260521103000_deal_kit_and_promotion_copy/`、`src/app/dashboard/deal-kits/page.tsx`、`src/app/dashboard/promotion-copies/page.tsx`、`src/server/actions/deal-kit.ts`、`src/server/actions/promotion-copy.ts`、`src/features/deal-kit/*`、`src/features/promotion-copy/*`、`src/components/deal-kit/*`、`src/components/promotion-copy/*`、`src/components/common/copy-button.tsx`、`src/components/dashboard/sidebar.tsx`、`tests/deal-kit/*`、`tests/promotion-copy/*`
+- 验证情况：`npm run db:generate` 通过；`npm test -- tests/deal-kit/entry.test.ts tests/deal-kit/ocr.test.ts tests/promotion-copy/generation.test.ts tests/crm/dashboard.test.ts tests/crm/calendar.test.ts` 通过；`npm run build` 通过。
+- 未完成项：
+  - 成交锦囊第一版未绑定具体客户成交记录，成交助攻仅记录为一次由销售主动确认的成功事件。
+- 风险 / 注意事项：
+  - 成交锦囊搜索曝光次数在刷新场景下会继续累计，后续报表解释要和引用 / 助攻区分开。
+  - OCR 识别质量受截图清晰度影响较大，必须走“识别后人工确认”的流程，不能直接信任自动抽取结果。
+  - 推广文案图片现阶段依赖服务器本地 `storage/` 持久化，部署时不能把该目录当临时目录处理。
+  - 推广文案轻改写在未配置 ARK_* 时走保守 fallback，只做小幅词句替换，质量不如模型版本。
+- 下一步建议：
+  - 若团队准备大规模使用成交锦囊，可补一个“按标签筛选 / 管理者归档低质量内容”的管理视图。
+  - 推广文案下一阶段可补“保存图片到相册”引导、图片排序与删除、以及文案使用报表。
+
 ### 2026-05-15 21:12 解读台新增“打开用户测评表”
 
 - 本次目标：在解读台“保存分享长图（PNG）”按钮后增加“打开用户测评表”，新窗口展示该客户最近一次测评的完整作答内容。
