@@ -147,3 +147,66 @@ export async function generateDoubaoImageJson<T>(params: {
     return params.fallback;
   }
 }
+
+export async function generateDoubaoImageText(params: {
+  system?: string;
+  user: string;
+  imageBuffer: Buffer;
+  mimeType?: string;
+  temperature?: number;
+  timeoutMs?: number;
+  fallback: string;
+}) {
+  if (!baseUrl || !apiKey || !ocrModel) {
+    return params.fallback;
+  }
+
+  const timeoutLimit = params.timeoutMs ?? requestTimeoutMs;
+  const mimeType = params.mimeType?.trim() || "image/png";
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutLimit);
+    const response = await fetch(getChatCompletionUrl(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: ocrModel,
+        temperature: params.temperature ?? 0.2,
+        messages: [
+          ...(params.system ? [{ role: "system", content: params.system }] : []),
+          {
+            role: "user",
+            content: [
+              { type: "text", text: params.user },
+              {
+                type: "image_url",
+                image_url: {
+                  url: getImageDataUrl(params.imageBuffer, mimeType),
+                },
+              },
+            ],
+          },
+        ],
+      }),
+      cache: "no-store",
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
+
+    if (!response.ok) {
+      return params.fallback;
+    }
+
+    const payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    const content = payload.choices?.[0]?.message?.content;
+    return content?.trim() || params.fallback;
+  } catch {
+    return params.fallback;
+  }
+}

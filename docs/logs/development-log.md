@@ -23,6 +23,35 @@
 
 ## 当前记录
 
+### 2026-05-21 17:05 成交锦囊 OCR / 向量 / 解读台稳定性修复
+
+- 本次目标：处理你最新反馈的 4 类问题：成交锦囊 OCR 明明是清晰截图却识别失败、成交锦囊缺少查改删入口、曝光/引用/助攻 0 次也上榜、进入解读台时因为知识库向量检索异常而白屏。
+- 完成内容：
+  - `成交锦囊 OCR` 再次重构：不再要求视觉模型直接返回 JSON，而是先让豆包视觉模型稳定读出整段原文，再由文本结构化逻辑拆成 `用户画像 / 用户判断 / 成交经验 / 贡献人`。这样和实测可用的方舟图片识别方式保持一致。
+  - 本地用你提供的清晰截图实测通过，已能稳定识别出三段核心内容；`contributorName` 在图片本身没有明确显示时保持为空，交由人工确认补齐。
+  - `知识库检索 / 解读台` 增加容错：`retrieveKnowledge` 在向量检索超时或豆包网关异常时直接回空数组，不再把整个解读台页面炸成 Server Components 白屏。
+  - `成交锦囊` 搜索也加了同类容错，避免语义搜索偶发失败把页面打崩。
+  - `成交锦囊` 页面新增 **成交锦囊管理** 区域，支持直接查看最近内容，并对管理员、主管、录入人本人开放修改/删除。
+  - 新增服务端动作：`updateDealKitEntry`、`deleteDealKitEntry`；修改时会重算标签、语义文本和向量。
+  - 三个榜单现在都只显示真实上榜数据：曝光榜仅统计 `searchExposureCount > 0`，引用榜仅统计 `citationCount > 0`，助攻榜仅统计 `conversionAssistCount > 0`；没有数据时显示“还没有上榜记录”。
+  - 服务器 AI 配置准备切换：现网问题已定位为 `aigate.dushu365.com` 网关连接超时，不是截图本身或豆包模型不可用。
+- 影响文件：
+  - `src/lib/ai/doubao.ts`
+  - `src/features/deal-kit/ocr.ts`
+  - `src/features/deal-kit/queries.ts`
+  - `src/features/knowledge/retrieval.ts`
+  - `src/server/actions/deal-kit.ts`
+  - `src/app/dashboard/deal-kits/page.tsx`
+- 验证情况：
+  - 本地 OCR 实测：`/Users/jordanwang/Downloads/微信图片_20260521160810_243_1094.png`
+  - `npm test -- tests/deal-kit/ocr.test.ts tests/promotion-copy/generation.test.ts tests/deal-kit/entry.test.ts`
+  - `npm run build`
+- 未完成项：无。
+- 风险 / 注意事项：
+  - 如果服务器继续走 `aigate.dushu365.com` 网关，OCR、向量检索、解读台仍会因为网关超时而间歇性失败；必须切到可用的直连方舟配置或修复网关连通性。
+  - 图片里没有贡献人时，仍然建议由人工确认页补齐，后续排行榜才不会丢归属。
+- 下一步建议：发布后重点复测 3 项：清晰截图 OCR、进入解读台、成交锦囊管理区的修改/删除。
+
 ### 2026-05-21 16:36 成交锦囊 OCR 切换到豆包图片识别
 
 - 本次目标：按你的要求，把 `成交锦囊` 的截图 OCR 从本地方案改成直接走豆包 OCR / 视觉模型，并重新部署到服务器。

@@ -48,6 +48,7 @@ async function persistDealKitEntry(params: {
   contributorName: string;
   recorderId: string;
   sourceType: string;
+  existingId?: string;
   metadata?: Record<string, unknown>;
 }) {
   const contributor = await resolveContributor(params.contributorName);
@@ -57,23 +58,48 @@ async function persistDealKitEntry(params: {
     suggestDealKitTags(params.input),
   ]);
 
-  await prisma.dealKitEntry.create({
-    data: {
-      contributorId: contributor?.id ?? null,
-      contributorName: contributor?.name ?? params.contributorName.trim(),
-      recorderId: params.recorderId,
-      profileText: params.input.profileText.trim(),
-      judgmentText: params.input.judgmentText.trim(),
-      experienceText: params.input.experienceText.trim(),
-      sourceType: params.sourceType,
-      status: "published",
-      tagsJson: JSON.stringify(tags),
-      metadataJson: JSON.stringify(params.metadata ?? {}),
-      semanticText,
-      embeddingJson: embedding.embeddingJson,
-      embeddingModel: embedding.embeddingModel,
-    },
-  });
+  const data = {
+    contributorId: contributor?.id ?? null,
+    contributorName: contributor?.name ?? params.contributorName.trim(),
+    recorderId: params.recorderId,
+    profileText: params.input.profileText.trim(),
+    judgmentText: params.input.judgmentText.trim(),
+    experienceText: params.input.experienceText.trim(),
+    sourceType: params.sourceType,
+    status: "published",
+    tagsJson: JSON.stringify(tags),
+    metadataJson: JSON.stringify(params.metadata ?? {}),
+    semanticText,
+    embeddingJson: embedding.embeddingJson,
+    embeddingModel: embedding.embeddingModel,
+  };
+
+  if (params.existingId) {
+    await prisma.dealKitEntry.update({
+      where: { id: params.existingId },
+      data,
+    });
+    return;
+  }
+
+  await prisma.dealKitEntry.create({ data });
+}
+
+async function getManageableDealKitEntry(session: { user: { id: string; role: "ADMIN" | "MANAGER" | "SALES" } }, id: string) {
+  const entry = await prisma.dealKitEntry.findUnique({ where: { id } });
+  if (!entry) {
+    throw new Error("成交锦囊不存在。");
+  }
+  const canManage =
+    session.user.role === "ADMIN" ||
+    session.user.role === "MANAGER" ||
+    entry.recorderId === session.user.id ||
+    entry.contributorId === session.user.id;
+
+  if (!canManage) {
+    throw new Error("你没有权限修改这条成交锦囊。");
+  }
+  return entry;
 }
 
 export async function createDealKitEntry(formData: FormData) {
@@ -105,6 +131,50 @@ export async function createDealKitEntry(formData: FormData) {
     }
     throw new Error("成交锦囊保存失败，请稍后再试。");
   }
+}
+
+export async function updateDealKitEntry(formData: FormData) {
+  const session = await requireActionSession();
+  const id = String(formData.get("id") || "").trim();
+  const contributorName = String(formData.get("contributorName") || "").trim();
+  const profileText = String(formData.get("profileText") || "").trim();
+  const judgmentText = String(formData.get("judgmentText") || "").trim();
+  const experienceText = String(formData.get("experienceText") || "").trim();
+
+  if (!id || !contributorName || !profileText || !judgmentText || !experienceText) {
+    throw new Error("请把贡献人、用户画像、用户判断和成交经验都填写完整。");
+  }
+
+  const existing = await getManageableDealKitEntry(session, id);
+
+  try {
+    await persistDealKitEntry({
+      existingId: id,
+      input: { profileText, judgmentText, experienceText },
+      contributorName,
+      recorderId: existing.recorderId,
+      sourceType: existing.sourceType,
+      metadata: parseJson<Record<string, unknown>>(existing.metadataJson, {}),
+    });
+    revalidatePath("/dashboard/deal-kits");
+  } catch (error) {
+    if (error instanceof Error && /填写完整|权限|登录/u.test(error.message)) {
+      throw error;
+    }
+    throw new Error("成交锦囊更新失败，请稍后再试。");
+  }
+}
+
+export async function deleteDealKitEntry(formData: FormData) {
+  const session = await requireActionSession();
+  const id = String(formData.get("id") || "").trim();
+  if (!id) {
+    throw new Error("缺少成交锦囊 ID。");
+  }
+
+  await getManageableDealKitEntry(session, id);
+  await prisma.dealKitEntry.delete({ where: { id } });
+  revalidatePath("/dashboard/deal-kits");
 }
 
 export async function parseDealKitOcr(

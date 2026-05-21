@@ -1,4 +1,4 @@
-import { generateDoubaoImageJson, generateDoubaoJson } from "@/lib/ai/doubao";
+import { generateDoubaoImageText, generateDoubaoJson } from "@/lib/ai/doubao";
 
 export interface DealKitOcrExtraction {
   contributorName: string;
@@ -103,26 +103,13 @@ async function refineDealKitStructuredText(rawText: string, fallback: DealKitOcr
 }
 
 async function recognizeDealKitImageWithDoubao(buffer: Buffer, mimeType: string) {
-  return generateDoubaoImageJson<DealKitOcrExtraction>({
-    system: `你是成交锦囊 OCR 整理助手。请直接阅读截图里的中文内容，并只输出 JSON：
-{"contributorName":"...","profileText":"...","judgmentText":"...","experienceText":"...","rawText":"..."}
-要求：
-1. 必须基于图片真实内容提取，不要编造
-2. 用户画像、用户判断、成交经验尽量按原文保留
-3. 如果贡献人没有明确写出，可以根据发言人昵称提取
-4. rawText 要尽量完整保留截图里的正文内容
-5. 如果某个字段没有，就返回空字符串`,
-    user: "请识别这张截图，并整理为成交锦囊字段。",
+  return generateDoubaoImageText({
+    system: "你是 OCR 助手。请完整读出图片里的中文内容，不要解释，不要总结，不要补充，只返回识别到的正文。",
+    user: "请逐行读出这张截图里的文字。",
     imageBuffer: buffer,
     mimeType,
     timeoutMs: 30_000,
-    fallback: {
-      contributorName: "",
-      profileText: "",
-      judgmentText: "",
-      experienceText: "",
-      rawText: "",
-    },
+    fallback: "",
   });
 }
 
@@ -130,34 +117,17 @@ export async function recognizeDealKitImage(
   buffer: Buffer,
   mimeType = "image/png",
 ): Promise<DealKitOcrExtraction> {
-  const direct = await recognizeDealKitImageWithDoubao(buffer, mimeType);
-  const directRawText = cleanOcrText(direct.rawText || "");
-  const normalizedDirect: DealKitOcrExtraction = {
-    contributorName: direct.contributorName?.trim() ?? "",
-    profileText: direct.profileText?.trim() ?? "",
-    judgmentText: direct.judgmentText?.trim() ?? "",
-    experienceText: direct.experienceText?.trim() ?? "",
-    rawText: directRawText,
-  };
-
-  if (hasAllStructuredSections(normalizedDirect)) {
-    return normalizedDirect;
-  }
-
+  const directRawText = cleanOcrText(await recognizeDealKitImageWithDoubao(buffer, mimeType));
   const reparsed = parseDealKitStructuredText(directRawText);
   if (hasAllStructuredSections(reparsed)) {
-    return {
-      ...reparsed,
-      contributorName: normalizedDirect.contributorName || reparsed.contributorName,
-      rawText: directRawText || reparsed.rawText,
-    };
+    return { ...reparsed, rawText: directRawText || reparsed.rawText };
   }
 
   const fallback = {
-    contributorName: normalizedDirect.contributorName || reparsed.contributorName,
-    profileText: normalizedDirect.profileText || reparsed.profileText,
-    judgmentText: normalizedDirect.judgmentText || reparsed.judgmentText,
-    experienceText: normalizedDirect.experienceText || reparsed.experienceText,
+    contributorName: reparsed.contributorName,
+    profileText: reparsed.profileText,
+    judgmentText: reparsed.judgmentText,
+    experienceText: reparsed.experienceText,
     rawText: directRawText || reparsed.rawText,
   };
   const refined = await refineDealKitStructuredText(fallback.rawText, fallback);
