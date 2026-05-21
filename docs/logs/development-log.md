@@ -23,6 +23,29 @@
 
 ## 当前记录
 
+### 2026-05-21 19:49 成交锦囊话术生成链路改为 API
+
+- 本次目标：继续处理 `成交锦囊` 点击“生成成交话术”仍然整页白屏的问题。前一轮排查后，确认问题很可能不只是业务异常，而是 `Server Action + 手机内嵌浏览器` 这条响应链本身不稳定。
+- 完成内容：
+  - 新增 `src/features/deal-kit/script.ts`，把“校验输入 -> 读取条目 -> 豆包生成 -> fallback -> 记录引用次数”的核心逻辑抽成独立服务函数。
+  - 新增接口 `POST /api/deal-kits/generate-script`，由普通 JSON 请求负责生成成交话术，不再依赖 Next Server Action 协议。
+  - `DealKitSearchPanel` 改为客户端 `fetch("/api/deal-kits/generate-script")`：
+    - 成功时直接在右侧展示生成话术
+    - 失败时只在当前面板显示中文错误
+    - 不再因为 Action 响应协议、Action ID 或内嵌浏览器兼容性问题把整页打崩
+  - 原 `generateDealKitScript` Server Action 保留，但内部也改为复用同一个服务函数，避免业务逻辑分叉。
+- 影响文件：
+  - `src/features/deal-kit/script.ts`
+  - `src/app/api/deal-kits/generate-script/route.ts`
+  - `src/components/deal-kit/deal-kit-search-panel.tsx`
+  - `src/server/actions/deal-kit.ts`
+- 验证情况：
+  - `npm test -- tests/deal-kit/ocr.test.ts tests/promotion-copy/generation.test.ts tests/deal-kit/entry.test.ts`
+  - `npm run build`
+- 未完成项：尚未额外补“引用次数记录失败原因”的细粒度日志；当前优先目标是让手机端生成动作稳定可用。
+- 风险 / 注意事项：这次修复是协议层切换，不只是简单 try/catch。后续若再出现“生成失败”，重点应查 `/api/deal-kits/generate-script` 返回值和服务器接口日志，而不是继续盯 Server Action。
+- 下一步建议：上线后优先用手机实测“搜索 -> 勾选 -> 生成成交话术 -> 复制话术”整条链路，确认不再出现整页错误页。
+
 ### 2026-05-21 19:40 成交锦囊话术生成白屏修复
 
 - 本次目标：修复手机端在 `成交锦囊` 搜索后勾选多条经验、点击“生成成交话术”时整页报 `An unexpected response was received from the server.` 的问题。

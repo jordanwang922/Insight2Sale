@@ -1,10 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 import { CopyButton } from "@/components/common/copy-button";
 import {
-  generateDealKitScript,
   markDealKitScriptSuccessful,
   type DealKitScriptState,
 } from "@/server/actions/deal-kit";
@@ -20,7 +19,8 @@ export function DealKitSearchPanel({
   results: DealKitSearchResult[];
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [state, formAction, pending] = useActionState(generateDealKitScript, initialState);
+  const [state, setState] = useState<DealKitScriptState>(initialState);
+  const [pending, setPending] = useState(false);
 
   const selectedResults = useMemo(
     () => results.filter((item) => selectedIds.includes(item.id)),
@@ -39,10 +39,46 @@ export function DealKitSearchPanel({
     });
   }
 
+  async function handleGenerate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+
+    setPending(true);
+    try {
+      const response = await fetch("/api/deal-kits/generate-script", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          entryIds: selectedIds,
+        }),
+      });
+
+      const payload = (await response.json()) as DealKitScriptState;
+      if (!response.ok) {
+        setState({
+          status: "error",
+          message: payload.message || "生成成交话术失败，请稍后再试。",
+        });
+        return;
+      }
+
+      setState(payload);
+    } catch {
+      setState({
+        status: "error",
+        message: "生成成交话术失败，请检查网络后再试。",
+      });
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-      <form action={formAction} className="space-y-4">
-        <input name="query" type="hidden" value={query} />
+      <form className="space-y-4" onSubmit={handleGenerate}>
         <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -68,10 +104,8 @@ export function DealKitSearchPanel({
                     <input
                       checked={checked}
                       className="mt-1 h-5 w-5 shrink-0"
-                      name="entryIds"
                       onChange={() => toggle(item.id)}
                       type="checkbox"
-                      value={item.id}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
