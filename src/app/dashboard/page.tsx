@@ -67,22 +67,22 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
         {data.statusCounts
           .filter((status) => status.count > 0)
           .map((status) => (
             <article
               key={status.id}
-              className="rounded-[1.5rem] border border-slate-200 bg-white px-5 py-5 shadow-sm"
+              className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 shadow-sm md:px-5 md:py-5"
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-500">{status.name}</p>
+                <p className="text-sm font-medium leading-6 text-slate-500">{status.name}</p>
                 <span
-                  className="h-3 w-3 rounded-full"
+                  className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: status.color }}
                 />
               </div>
-              <p className="mt-4 text-4xl font-semibold text-slate-950">{status.count}</p>
+              <p className="mt-4 text-3xl font-semibold text-slate-950 md:text-4xl">{status.count}</p>
             </article>
           ))}
       </section>

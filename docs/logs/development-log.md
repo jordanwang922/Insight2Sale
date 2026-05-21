@@ -23,6 +23,39 @@
 
 ## 当前记录
 
+### 2026-05-21 18:36 手机端导航 / 工作台布局 / 成交锦囊保存反馈优化
+
+- 本次目标：修复手机端没有菜单导致无法测试新功能的问题，调整工作台状态卡在手机端的一行一个低效布局，并增强成交锦囊保存/修改时的防重复与提交反馈。
+- 完成内容：
+  - 新增 `DashboardMobileNavDrawer`：手机端顶部增加菜单按钮，点击后从左侧弹出导航抽屉，选中任一菜单项后自动收起；桌面端仍保留左侧固定侧边栏。
+  - 抽离 `dashboard/nav-links.ts`，统一桌面侧边栏与手机端抽屉菜单的导航来源，避免两端菜单不一致。
+  - `DashboardTopbar` 接入手机菜单按钮，保留当前账号与退出登录。
+  - 工作台状态卡在手机端改为 **2 列网格**（`grid-cols-2`），平板 3 列，桌面 5 列；减少纵向滚动长度，提升一屏可读性。
+  - 新增 `PendingSubmitButton`，用于成交锦囊相关表单显示明确提交态：
+    - `保存为成交锦囊` → `正在存入成交锦囊...`
+    - `确认保存到成交锦囊` → `正在存入成交锦囊...`
+    - `保存修改` → `正在保存修改...`
+    - `删除这条成交锦囊` → `正在删除...`
+  - 成交锦囊服务端补轻量幂等 / 防重复：
+    - 新建时，如果 30 秒内同一录入人提交了完全相同的内容，直接视作已保存，不重复新建
+    - 修改时，如果内容没有变化，直接短路返回，不重复做向量化
+- 影响文件：
+  - `src/components/dashboard/nav-links.ts`
+  - `src/components/dashboard/mobile-nav-drawer.tsx`
+  - `src/components/dashboard/sidebar.tsx`
+  - `src/components/dashboard/topbar.tsx`
+  - `src/app/dashboard/page.tsx`
+  - `src/components/forms/pending-submit-button.tsx`
+  - `src/app/dashboard/deal-kits/page.tsx`
+  - `src/components/deal-kit/deal-kit-ocr-form.tsx`
+  - `src/server/actions/deal-kit.ts`
+- 验证情况：
+  - `npm test -- tests/deal-kit/ocr.test.ts tests/promotion-copy/generation.test.ts tests/deal-kit/entry.test.ts`
+  - `npm run build`
+- 未完成项：这轮主要集中在手机端导航和工作台首页；其它页面的手机端细节仍建议继续逐页走查。
+- 风险 / 注意事项：当前成交锦囊的“新建幂等”是基于“30 秒内同一录入人 + 完全相同内容”的轻量策略，不是全局分布式幂等键，但足够覆盖用户反复点保存的常见场景。
+- 下一步建议：上线后优先在手机上复测 `工作台 -> 菜单抽屉 -> 成交锦囊 / 推广文案 / 客户管理` 的跳转与收起行为，并继续逐页检查手机端点击区和信息密度。
+
 ### 2026-05-21 17:05 成交锦囊 OCR / 向量 / 解读台稳定性修复
 
 - 本次目标：处理你最新反馈的 4 类问题：成交锦囊 OCR 明明是清晰截图却识别失败、成交锦囊缺少查改删入口、曝光/引用/助攻 0 次也上榜、进入解读台时因为知识库向量检索异常而白屏。

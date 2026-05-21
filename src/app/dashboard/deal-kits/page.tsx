@@ -1,6 +1,7 @@
 import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
 import { DealKitOcrForm } from "@/components/deal-kit/deal-kit-ocr-form";
 import { DealKitSearchPanel } from "@/components/deal-kit/deal-kit-search-panel";
+import { PendingSubmitButton } from "@/components/forms/pending-submit-button";
 import { createDealKitEntry, deleteDealKitEntry, updateDealKitEntry } from "@/server/actions/deal-kit";
 import { getDealKitPageData } from "@/features/deal-kit/queries";
 import { isManagerOrAdmin } from "@/lib/role-access";
@@ -72,9 +73,11 @@ export default async function DealKitsPage({
                 placeholder="成交经验：你最后是怎么推进、怎么让她愿意继续往前走的"
               />
             </div>
-            <button className="mt-4 w-full rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950">
-              保存为成交锦囊
-            </button>
+            <PendingSubmitButton
+              className="mt-4 w-full rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+              idleLabel="保存为成交锦囊"
+              pendingLabel="正在存入成交锦囊..."
+            />
           </div>
         </ActionFeedbackForm>
 
@@ -211,16 +214,20 @@ export default async function DealKitsPage({
                           name="experienceText"
                         />
                       </div>
-                      <button className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
-                        保存修改
-                      </button>
+                      <PendingSubmitButton
+                        className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        idleLabel="保存修改"
+                        pendingLabel="正在保存修改..."
+                      />
                     </ActionFeedbackForm>
 
                     <ActionFeedbackForm action={deleteDealKitEntry} successMessage="成交锦囊已删除。">
                       <input name="id" type="hidden" value={item.id} />
-                      <button className="w-full rounded-2xl border border-rose-300 px-4 py-3 text-sm font-semibold text-rose-700">
-                        删除这条成交锦囊
-                      </button>
+                      <PendingSubmitButton
+                        className="w-full rounded-2xl border border-rose-300 px-4 py-3 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        idleLabel="删除这条成交锦囊"
+                        pendingLabel="正在删除..."
+                      />
                     </ActionFeedbackForm>
                   </div>
                 </details>

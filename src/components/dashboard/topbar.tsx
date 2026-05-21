@@ -1,18 +1,24 @@
 import { auth, signOut } from "@/auth";
+import { DashboardMobileNavDrawer } from "@/components/dashboard/mobile-nav-drawer";
 
 export async function DashboardTopbar() {
   const session = await auth();
 
   return (
-    <header className="border-b border-slate-200/80 bg-white/80 px-4 py-4 backdrop-blur md:px-8">
+    <header className="border-b border-slate-200/80 bg-white/90 px-4 py-4 backdrop-blur md:px-8">
       <p className="text-sm text-slate-500">当前账号</p>
-      <div className="mt-1 flex items-center justify-between gap-3">
-        <h2 className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-lg font-semibold text-slate-950">
-          <span className="min-w-0">{session?.user.name}</span>
-          <span className="inline-flex shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-            {session?.user.role === "ADMIN" ? "管理员" : session?.user.role === "MANAGER" ? "主管" : "销售"}
-          </span>
-        </h2>
+      <div className="mt-1 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          {session?.user ? (
+            <DashboardMobileNavDrawer role={session.user.role} userName={session.user.name ?? "当前账号"} />
+          ) : null}
+          <h2 className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-lg font-semibold text-slate-950">
+            <span className="min-w-0">{session?.user.name}</span>
+            <span className="inline-flex shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+              {session?.user.role === "ADMIN" ? "管理员" : session?.user.role === "MANAGER" ? "主管" : "销售"}
+            </span>
+          </h2>
+        </div>
         <form
           className="shrink-0"
           action={async () => {

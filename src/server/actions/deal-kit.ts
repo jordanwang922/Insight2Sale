@@ -43,6 +43,14 @@ async function resolveContributor(inputName: string) {
   });
 }
 
+function trimDealKitInput(input: DealKitEntryInput) {
+  return {
+    profileText: input.profileText.trim(),
+    judgmentText: input.judgmentText.trim(),
+    experienceText: input.experienceText.trim(),
+  };
+}
+
 async function persistDealKitEntry(params: {
   input: DealKitEntryInput;
   contributorName: string;
@@ -52,19 +60,20 @@ async function persistDealKitEntry(params: {
   metadata?: Record<string, unknown>;
 }) {
   const contributor = await resolveContributor(params.contributorName);
-  const semanticText = buildDealKitSemanticText(params.input);
+  const cleanInput = trimDealKitInput(params.input);
+  const semanticText = buildDealKitSemanticText(cleanInput);
   const [embedding, tags] = await Promise.all([
     embedDealKitText(semanticText),
-    suggestDealKitTags(params.input),
+    suggestDealKitTags(cleanInput),
   ]);
 
   const data = {
     contributorId: contributor?.id ?? null,
     contributorName: contributor?.name ?? params.contributorName.trim(),
     recorderId: params.recorderId,
-    profileText: params.input.profileText.trim(),
-    judgmentText: params.input.judgmentText.trim(),
-    experienceText: params.input.experienceText.trim(),
+    profileText: cleanInput.profileText,
+    judgmentText: cleanInput.judgmentText,
+    experienceText: cleanInput.experienceText,
     sourceType: params.sourceType,
     status: "published",
     tagsJson: JSON.stringify(tags),
@@ -116,6 +125,24 @@ export async function createDealKitEntry(formData: FormData) {
   }
 
   try {
+    const duplicate = await prisma.dealKitEntry.findFirst({
+      where: {
+        recorderId: session.user.id,
+        contributorName,
+        profileText,
+        judgmentText,
+        experienceText,
+        createdAt: {
+          gte: new Date(Date.now() - 30_000),
+        },
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      revalidatePath("/dashboard/deal-kits");
+      return;
+    }
+
     await persistDealKitEntry({
       input: { profileText, judgmentText, experienceText },
       contributorName,
@@ -146,6 +173,15 @@ export async function updateDealKitEntry(formData: FormData) {
   }
 
   const existing = await getManageableDealKitEntry(session, id);
+  if (
+    existing.contributorName === contributorName &&
+    existing.profileText === profileText &&
+    existing.judgmentText === judgmentText &&
+    existing.experienceText === experienceText
+  ) {
+    revalidatePath("/dashboard/deal-kits");
+    return;
+  }
 
   try {
     await persistDealKitEntry({

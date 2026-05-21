@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { ActionFeedbackForm } from "@/components/forms/action-feedback-form";
+import { PendingSubmitButton } from "@/components/forms/pending-submit-button";
 import { createDealKitEntry, parseDealKitOcr, type DealKitOcrState } from "@/server/actions/deal-kit";
 
 const initialState: DealKitOcrState = { status: "idle" };
@@ -72,9 +73,11 @@ export function DealKitOcrForm({ defaultContributorName }: { defaultContributorN
                 placeholder="成交经验"
               />
             </div>
-            <button className="mt-4 w-full rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950">
-              确认保存到成交锦囊
-            </button>
+            <PendingSubmitButton
+              className="mt-4 w-full rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+              idleLabel="确认保存到成交锦囊"
+              pendingLabel="正在存入成交锦囊..."
+            />
           </div>
         </ActionFeedbackForm>
       ) : null}
