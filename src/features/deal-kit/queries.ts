@@ -35,6 +35,61 @@ export interface DealKitManageEntry {
   canManage: boolean;
 }
 
+export function normalizeDealKitSearchText(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{Script=Han}\p{Letter}\p{Number}\s]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeSearchText(text: string) {
+  const normalized = normalizeDealKitSearchText(text);
+  const tokens = new Set<string>();
+
+  const latinTokens = normalized.match(/[a-z0-9]+/g) ?? [];
+  for (const token of latinTokens) {
+    if (token.length > 1) tokens.add(token);
+  }
+
+  const hanSegments = normalized.match(/[\p{Script=Han}]+/gu) ?? [];
+  for (const segment of hanSegments) {
+    if (segment.length === 1) {
+      tokens.add(segment);
+      continue;
+    }
+    for (let index = 0; index < segment.length - 1; index += 1) {
+      tokens.add(segment.slice(index, index + 2));
+    }
+  }
+
+  return [...tokens];
+}
+
+function computeTokenOverlapRatio(query: string, semanticText: string) {
+  const queryTokens = tokenizeSearchText(query);
+  if (!queryTokens.length) return 0;
+  const semanticTokens = new Set(tokenizeSearchText(semanticText));
+  const matched = queryTokens.filter((token) => semanticTokens.has(token)).length;
+  return matched / queryTokens.length;
+}
+
+export function isDealKitSearchMatch(query: string, semanticText: string, semanticScore: number, overlapRatio: number) {
+  const normalizedQuery = normalizeDealKitSearchText(query);
+  const normalizedSemantic = normalizeDealKitSearchText(semanticText);
+  const exactContains = normalizedQuery.length > 0 && normalizedSemantic.includes(normalizedQuery);
+
+  if (normalizedQuery.length <= 2) {
+    return exactContains;
+  }
+
+  if (normalizedQuery.length <= 4) {
+    return exactContains || overlapRatio >= 0.5 || semanticScore >= 0.5;
+  }
+
+  return exactContains || overlapRatio >= 0.34 || semanticScore >= 0.42;
+}
+
 function topEntriesOrderBy(field: "searchExposureCount" | "citationCount" | "conversionAssistCount") {
   return [{ [field]: "desc" }, { createdAt: "desc" }] as Prisma.DealKitEntryOrderByWithRelationInput[];
 }
@@ -84,6 +139,11 @@ export async function searchDealKitEntries(query: string, viewerId: string, limi
           { id: entry.id, content: entry.semanticText, embedding: entry.embedding },
         ])[0]?.score;
         if (typeof semanticScore !== "number") {
+          return [];
+        }
+
+        const overlapRatio = computeTokenOverlapRatio(trimmed, entry.semanticText);
+        if (!isDealKitSearchMatch(trimmed, entry.semanticText, semanticScore, overlapRatio)) {
           return [];
         }
 
