@@ -30,15 +30,15 @@ export function DashboardMobileNavDrawer({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 xl:hidden">
+        <div className="fixed inset-0 z-[80] xl:hidden">
           <button
             type="button"
             aria-label="关闭菜单遮罩"
             className="absolute inset-0 bg-slate-950/35"
             onClick={() => setOpen(false)}
           />
-          <aside className="absolute left-0 top-0 flex h-full w-[84vw] max-w-[20rem] flex-col border-r border-slate-200 bg-white px-4 py-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
+          <aside className="absolute inset-y-0 left-0 flex h-dvh w-[84vw] max-w-[20rem] flex-col overflow-hidden border-r border-slate-200 bg-white px-4 pb-5 pt-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-600">Insight2Sale</p>
                 <h2 className="mt-2 text-xl font-semibold text-slate-950">智慧父母 CRM</h2>
@@ -54,7 +54,7 @@ export function DashboardMobileNavDrawer({
               </button>
             </div>
 
-            <nav className="mt-6 space-y-2 overflow-y-auto">
+            <nav className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pb-6">
               {links.map(({ href, label, icon: Icon }) => {
                 const active = pathname === href;
                 return (
