@@ -23,6 +23,24 @@
 
 ## 当前记录
 
+### 2026-05-21 19:40 成交锦囊话术生成白屏修复
+
+- 本次目标：修复手机端在 `成交锦囊` 搜索后勾选多条经验、点击“生成成交话术”时整页报 `An unexpected response was received from the server.` 的问题。
+- 完成内容：
+  - `src/server/actions/deal-kit.ts` 中 `generateDealKitScript` 改成全链路中文兜底，不再把异常直接抛给前端。
+  - 生成流程拆成两层容错：
+    - 豆包生成失败时，继续用本地 fallback 话术返回结果。
+    - 数据库创建 `DealKitScriptGeneration` 或递增 `citationCount` 失败时，也不再整页白屏，而是先把已生成的话术返回给用户，并提示“这次没有成功记录引用次数”。
+  - 登录失效 / 权限不足时，改为在当前面板内显示中文错误，而不是触发整页异常页。
+- 影响文件：
+  - `src/server/actions/deal-kit.ts`
+- 验证情况：
+  - `npm test -- tests/deal-kit/ocr.test.ts tests/promotion-copy/generation.test.ts tests/deal-kit/entry.test.ts`
+  - `npm run build`
+- 未完成项：还没有把“引用记录失败”的具体失败原因落库；当前优先保证销售端生成话术不中断。
+- 风险 / 注意事项：如果后续仍出现“已生成但未记录引用次数”的提示，需要继续查服务器数据库约束或线上事务失败原因，但这不会再影响一线使用。
+- 下一步建议：上线后优先复测“勾选 1 条 / 2 条 / 3 条经验生成话术”，以及生成后点击“通过这个话术成交”的整条链路。
+
 ### 2026-05-21 19:28 成交锦囊搜索相关性收紧
 
 - 本次目标：修复 `成交锦囊` 搜索“随便输什么都能搜出来”的问题，避免像输入 `猫咪` 这种与成交经验无关的词也返回结果。
